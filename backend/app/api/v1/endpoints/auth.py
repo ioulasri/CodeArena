@@ -1,12 +1,46 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from typing import Optional
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.security import hash_password, verify_password, create_access_token, decode_token
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
 
 router = APIRouter()
+
+
+# Dependency for getting current user
+async def get_current_user_dependency(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+) -> User:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials"
+        )
+    
+    token = authorization.replace("Bearer ", "")
+    payload = decode_token(token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    
+    username = payload.get("sub")
+    user = db.query(User).filter(User.username == username).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    return user
+
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -58,36 +92,3 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
 async def get_current_user(current_user: User = Depends(get_current_user_dependency)):
     """Get current authenticated user"""
     return current_user
-
-# Dependency for getting current user
-from app.core.security import decode_token
-
-async def get_current_user_dependency(
-    authorization: str = None,
-    db: Session = Depends(get_db)
-) -> User:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials"
-        )
-    
-    token = authorization.replace("Bearer ", "")
-    payload = decode_token(token)
-    
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
-    
-    username = payload.get("sub")
-    user = db.query(User).filter(User.username == username).first()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-    
-    return user
