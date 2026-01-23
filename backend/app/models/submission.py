@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey, Boolean
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import Base
 
 
@@ -17,5 +17,5 @@ class Submission(Base):
     test_cases_passed = Column(Integer, nullable=True)
     test_cases_total = Column(Integer, nullable=True)
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

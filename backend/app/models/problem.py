@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import Base
 
 
@@ -15,8 +15,8 @@ class Problem(Base):
     tags = Column(JSON, nullable=True)  # JSONB in PostgreSQL
     time_limit_ms = Column(Integer, default=1000)
     memory_limit_mb = Column(Integer, default=256)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 
@@ -28,4 +28,4 @@ class TestCase(Base):
     input_data = Column(Text, nullable=False)
     expected_output = Column(Text, nullable=False)
     is_sample = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

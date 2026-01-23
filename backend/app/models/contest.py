@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.database import Base
 
 
@@ -13,4 +13,4 @@ class Contest(Base):
     end_time = Column(DateTime, nullable=False)
     status = Column(String(20), index=True)  # UPCOMING, ONGOING, COMPLETED
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

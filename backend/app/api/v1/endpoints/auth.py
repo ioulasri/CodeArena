@@ -9,7 +9,6 @@ from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
 
 router = APIRouter()
 
-
 # Dependency for getting current user
 async def get_current_user_dependency(
     authorization: Optional[str] = Header(None),
