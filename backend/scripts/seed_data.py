@@ -26,35 +26,22 @@ def create_sample_problems(db: Session):
 
 You may assume that each input would have exactly one solution, and you may not use the same element twice.
 
-You can return the answer in any order.""",
+You can return the answer in any order.
+
+Example 1:
+Input: 2 7 11 15
+       9
+Output: 0 1
+
+Example 2:
+Input: 3 2 4
+       6
+Output: 1 2""",
         difficulty="EASY",
         category="Arrays",
         tags=["array", "hash-table"],
-        constraints="""- 2 <= nums.length <= 10^4
-- -10^9 <= nums[i] <= 10^9
-- -10^9 <= target <= 10^9
-- Only one valid answer exists.""",
-        examples=[
-            {
-                "input": "2 7 11 15\n9",
-                "output": "0 1",
-                "explanation": "Because nums[0] + nums[1] == 9, we return [0, 1]."
-            },
-            {
-                "input": "3 2 4\n6",
-                "output": "1 2",
-                "explanation": "Because nums[1] + nums[2] == 6, we return [1, 2]."
-            },
-            {
-                "input": "3 3\n6",
-                "output": "0 1",
-                "explanation": "Because nums[0] + nums[1] == 6, we return [0, 1]."
-            }
-        ],
         time_limit_ms=2000,
-        memory_limit_mb=128,
-        acceptance_rate=49.5,
-        is_premium=False
+        memory_limit_mb=128
     )
     
     # Problem 2: Reverse String
@@ -63,28 +50,20 @@ You can return the answer in any order.""",
         slug="reverse-string",
         description="""Write a function that reverses a string. The input string is given as an array of characters.
 
-You must do this by modifying the input array in-place with O(1) extra memory.""",
+You must do this by modifying the input array in-place with O(1) extra memory.
+
+Example 1:
+Input: hello
+Output: olleh
+
+Example 2:
+Input: world
+Output: dlrow""",
         difficulty="EASY",
         category="Strings",
         tags=["string", "two-pointers"],
-        constraints="""- 1 <= s.length <= 10^5
-- s[i] is a printable ascii character.""",
-        examples=[
-            {
-                "input": "hello",
-                "output": "olleh",
-                "explanation": "Reverse the string 'hello' to 'olleh'"
-            },
-            {
-                "input": "world",
-                "output": "dlrow",
-                "explanation": "Reverse the string 'world' to 'dlrow'"
-            }
-        ],
         time_limit_ms=1000,
-        memory_limit_mb=64,
-        acceptance_rate=72.8,
-        is_premium=False
+        memory_limit_mb=64
     )
     
     # Problem 3: Fizz Buzz
@@ -97,27 +76,16 @@ You must do this by modifying the input array in-place with O(1) extra memory.""
 - For multiples of both 3 and 5, print "FizzBuzz"
 - Otherwise, print the number
 
-Return the list for all numbers from 1 to n.""",
+Return the list for all numbers from 1 to n.
+
+Example:
+Input: 15
+Output: 1 2 Fizz 4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz""",
         difficulty="EASY",
         category="Math",
         tags=["math", "string"],
-        constraints="1 <= n <= 10^4",
-        examples=[
-            {
-                "input": "5",
-                "output": "1\n2\nFizz\n4\nBuzz",
-                "explanation": "Output for n=5"
-            },
-            {
-                "input": "15",
-                "output": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz",
-                "explanation": "Output for n=15"
-            }
-        ],
         time_limit_ms=1000,
-        memory_limit_mb=64,
-        acceptance_rate=65.2,
-        is_premium=False
+        memory_limit_mb=64
     )
     
     # Problem 4: Palindrome Number
@@ -127,32 +95,23 @@ Return the list for all numbers from 1 to n.""",
         description="""Given an integer x, return true if x is a palindrome, and false otherwise.
 
 An integer is a palindrome when it reads the same forward and backward.
-For example, 121 is a palindrome while 123 is not.""",
+
+Example 1:
+Input: 121
+Output: true
+
+Example 2:
+Input: -121
+Output: false
+
+Example 3:
+Input: 10
+Output: false""",
         difficulty="EASY",
         category="Math",
         tags=["math"],
-        constraints="-2^31 <= x <= 2^31 - 1",
-        examples=[
-            {
-                "input": "121",
-                "output": "true",
-                "explanation": "121 reads as 121 from left to right and from right to left."
-            },
-            {
-                "input": "-121",
-                "output": "false",
-                "explanation": "From left to right, it reads -121. From right to left, it becomes 121-."
-            },
-            {
-                "input": "10",
-                "output": "false",
-                "explanation": "Reads 01 from right to left."
-            }
-        ],
         time_limit_ms=1000,
-        memory_limit_mb=64,
-        acceptance_rate=54.3,
-        is_premium=False
+        memory_limit_mb=64
     )
     
     # Add problems to database
