@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import './Login.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
@@ -17,7 +19,7 @@ function Login({ onLogin }) {
     try {
       if (isRegister) {
         // Register
-        const registerRes = await fetch('http://localhost:8000/api/v1/auth/register', {
+        const registerRes = await fetch(`${API_URL}/api/v1/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, email, password })
@@ -30,7 +32,7 @@ function Login({ onLogin }) {
       }
 
       // Login
-      const loginRes = await fetch('http://localhost:8000/api/v1/auth/login', {
+      const loginRes = await fetch(`${API_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -44,7 +46,7 @@ function Login({ onLogin }) {
       const loginData = await loginRes.json();
 
       // Get user data
-      const userRes = await fetch('http://localhost:8000/api/v1/auth/me', {
+      const userRes = await fetch(`${API_URL}/api/v1/auth/me`, {
         headers: { 'Authorization': `Bearer ${loginData.access_token}` }
       });
 
