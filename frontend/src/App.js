@@ -3,19 +3,28 @@ import './App.css';
 import Login from './components/Login';
 import Terminal from './components/Terminal';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(null);
 
+  console.log('App rendering - API_URL:', API_URL, 'Token exists:', !!token, 'User:', user);
+
   useEffect(() => {
     if (token) {
       // Verify token and get user
-      fetch('http://localhost:8000/api/v1/auth/me', {
+      fetch(`${API_URL}/api/v1/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Token validation failed');
+          }
+          return res.json();
+        })
         .then(data => {
           if (data.username) {
             setUser(data);
@@ -25,7 +34,8 @@ function App() {
             setToken(null);
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('Token verification error:', error);
           localStorage.removeItem('token');
           setToken(null);
         });
