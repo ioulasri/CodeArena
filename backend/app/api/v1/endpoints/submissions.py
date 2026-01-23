@@ -1,28 +1,38 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from app.core.database import get_db
 from app.models.submission import Submission
 from app.schemas.submission import SubmissionResponse, SubmissionCreate
+from app.services.submission_evaluator import SubmissionEvaluator
 
 router = APIRouter()
+
+# Initialize evaluator
+evaluator = SubmissionEvaluator()
 
 @router.post("/", response_model=SubmissionResponse, status_code=status.HTTP_201_CREATED)
 async def create_submission(
     submission_data: SubmissionCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    """Submit code for a problem"""
+    """Submit code for a problem - evaluation runs asynchronously"""
     # TODO: Add authentication to get current user
-    # TODO: Implement code execution service in Week 3
     
     db_submission = Submission(
-        **submission_data.dict(),
+        **submission_data.model_dump(),
         status="PENDING"
     )
     db.add(db_submission)
     db.commit()
     db.refresh(db_submission)
+    
+    # Queue submission for evaluation in background
+    background_tasks.add_task(
+        evaluator.evaluate_submission,
+        submission_id=db_submission.id
+    )
     
     return db_submission
 

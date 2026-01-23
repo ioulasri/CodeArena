@@ -8,7 +8,6 @@ class SubmissionBase(BaseModel):
     code: str
     language: str  # python, javascript, java, cpp
 
-
 class SubmissionCreate(SubmissionBase):
     user_id: int
 
