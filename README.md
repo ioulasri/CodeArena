@@ -51,7 +51,7 @@ codearena/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/CodeArena.git
+   git clone https://github.com/ioulasri/CodeArena.git
    cd CodeArena
    ```
 
