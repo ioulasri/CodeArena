@@ -35,19 +35,20 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
       context: .
       dockerfile: docker/frontend.dockerfile
+      args:
+        REACT_APP_API_URL: http://192.168.100.2:8000
     container_name: codearena-frontend
     ports:
       - "3000:80"
     depends_on:
       - backend
-    environment:
-      REACT_APP_API_URL: http://localhost:8000
 
 volumes:
   postgres_data:
