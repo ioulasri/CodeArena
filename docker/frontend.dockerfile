@@ -2,6 +2,10 @@ FROM node:18-alpine as build
 
 WORKDIR /app
 
+# Accept build argument for API URL
+ARG REACT_APP_API_URL=http://localhost:8000
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
 # Install dependencies
 COPY frontend/package*.json ./
 RUN npm install
@@ -9,7 +13,7 @@ RUN npm install
 # Copy application code
 COPY frontend/ .
 
-# Build the application
+# Build the application with environment variable injected
 RUN npm run build
 
 # Production stage
