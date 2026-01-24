@@ -1,0 +1,73 @@
+header {
+  display: block;
+  margin-bottom: 2em;
+  width: 100%;
+}
+
+header > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5em;
+  width: 100%;
+}
+
+header > div:first-child {
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5em;
+}
+
+header h1 {
+  display: inline-block;
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: normal;
+}
+
+header h1 a {
+  text-decoration: none;
+  color: inherit;
+}
+
+header h1 a:hover {
+  text-decoration: none;
+  color: #9f9;
+}
+
+.title-global {
+  color: #00cc00;
+}
+
+.title-event {
+  color: #ffff66;
+  font-family: 'Source Code Pro', monospace;
+}
+
+.title-event-wrap {
+  color: #666;
+}
+
+header nav {
+  display: inline-block;
+}
+
+header nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 0.5em;
+}
+
+header nav li {
+  display: inline-block;
+}
+
+header nav a {
+  text-decoration: none;
+  color: #666;
+}
+
+header nav a:hover {
+  color: #9f9;
+}

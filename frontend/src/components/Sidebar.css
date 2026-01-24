@@ -1,0 +1,41 @@
+#sidebar {
+  position: fixed;
+  right: 10px;
+  top: 10px;
+  width: 200px;
+  padding: 0.5em 1em;
+  border: 1px solid #333;
+  background: #0f0f23;
+  z-index: 100;
+}
+
+#sponsor {
+  font-size: 0.9em;
+}
+
+#sponsor .quiet {
+  color: #666;
+  margin-bottom: 0.5em;
+}
+
+#sponsor .sponsor {
+  margin-top: 0.5em;
+}
+
+#sponsor a {
+  color: #9f9;
+  text-decoration: none;
+}
+
+#sponsor a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #sidebar {
+    position: static;
+    width: auto;
+    margin-bottom: 1em;
+  }
+}

@@ -1,0 +1,32 @@
+pre {
+  background: #10101a;
+  border: 1px solid #333;
+  padding: 1em;
+  margin: 1em 0;
+  overflow-x: auto;
+  border-radius: 3px;
+}
+
+pre code {
+  font-family: 'Source Code Pro', monospace;
+  color: #ccc;
+  background: none;
+  border: none;
+  padding: 0;
+  display: block;
+  cursor: text;
+}
+
+code {
+  font-family: 'Source Code Pro', monospace;
+  color: #fff;
+  background: #10101a;
+  padding: 0.2em 0.4em;
+  border: 1px solid #333;
+  border-radius: 3px;
+}
+
+/* Triple-click selection styling */
+pre code::selection {
+  background: #264f78;
+}
