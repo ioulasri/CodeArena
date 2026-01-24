@@ -1,83 +1,48 @@
-# CodeArena - Competitive Puzzle Platform 🏆
 
-An **Advent of Code-inspired** competitive puzzle platform where players race to solve unique challenges in real-time 1v1 matches!
+
+# CodeArena - Advent of Code Style Competitive Puzzle Platform 🎄🏆
+
+Welcome to **CodeArena**: a modern, Advent of Code-inspired puzzle platform for 1v1 competitive matches! Solve unique puzzles, race your friends, and climb the leaderboard—all in a beautiful retro UI.
+
+---
 
 ## ✨ Features
 
-- 🎯 **Unique Puzzle Inputs** - Each player gets different input data for fair competition
-- ⚔️ **1v1 Real-Time Matches** - Challenge friends or find random opponents
-- 🔴 **Live WebSocket Updates** - See opponent progress in real-time
-- 🧩 **5 Puzzle Types** - Math, sequences, grids, patterns, and more
-- 🏅 **Global Leaderboards** - Track wins, fastest times, and streaks
-- 🎨 **AoC-Style UI** - Beautiful retro terminal aesthetic
-- 🔧 **Solve Anywhere** - Use your own IDE, just submit the answer!
+- **Advent of Code Aesthetic**: Story-driven puzzles, retro terminal UI, and daily calendar
+- **Unique Inputs**: Each player gets different puzzle data for every match
+- **1v1 Competitive Matches**: Race to solve—first correct answer wins!
+- **No Code Execution**: Solve in your own IDE, submit only the answer
+- **Live WebSocket Updates**: See your opponent's progress in real time
+- **Leaderboard & Stats**: Track wins, streaks, and global rankings
+- **5+ Puzzle Types**: Math, patterns, grids, sequences, and more
+- **Easy to Extend**: Add new puzzles, pages, and features with clear guides
 
-## 🎮 How It Works
-
-1. **Choose a Puzzle** - Browse the calendar of daily challenges
-2. **Start a Match** - Create a public/private room or join existing
-3. **Get Unique Input** - Receive your personalized puzzle data
-4. **Solve in Your IDE** - Use Python, JS, or any language you prefer
-5. **Submit Answer** - Enter your solution on the website
-6. **First Correct Wins!** 🏆
+---
 
 ## 🚀 Quick Start
 
-### Using the Setup Script
-
 ```bash
+git clone https://github.com/ioulasri/CodeArena.git
+cd CodeArena
 ./setup.sh
+docker-compose up --build -d
+make db-migrate
 ```
 
-Then follow the instructions to start backend and frontend!
+Access:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 
-### Manual Setup
+---
 
-**Backend:**
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+## 🧩 Example Puzzle (Story Style)
 
-**Frontend:**
-```bash
-cd newfront_end
-npm install
-npm start
-```
+**--- Day 1: The Crystal Cavern ---**
 
-**Database:**
-```bash
-createdb codearena
-psql -d codearena < backend/migrations/001_initial_schema.sql
-psql -d codearena < backend/migrations/002_puzzle_match_schema.sql
-```
+You descend into the ancient Crystal Cavern, where shimmering stones line the walls. Each stone has a number. To unlock the next chamber, you must find the sum of all stones that are multiples of 3 or 5.
 
-📚 **Full Setup Guide:** See [PUZZLE_PLATFORM_GUIDE.md](PUZZLE_PLATFORM_GUIDE.md)
-
-## 🧩 Available Puzzles
-
-1. **Day 1: Crystal Cave Numbers** (Easy)  
-   Find the sum of all multiples of 3 or 5
-
-2. **Day 2: Encrypted Scroll** (Medium)  
-   Count pattern occurrences including overlaps
-
-3. **Day 3: Magic Grid** (Medium)  
-   Find maximum sum path (only right/down moves)
-
-4. **Day 4: Sequence Cipher** (Hard)  
-   Predict the next 3 numbers in a sequence
-
-5. **Day 5: Tower of Blocks** (Hard)  
-   Find maximum value by strategic block removal
-
-## 🎯 Example Gameplay
-
-**Puzzle Input (unique to you):**
+**Your input (unique!):**
 ```
 234
 567
@@ -87,81 +52,129 @@ psql -d codearena < backend/migrations/002_puzzle_match_schema.sql
 ...
 ```
 
-**Your Solution (any language):**
+**Solve in your IDE:**
 ```python
 numbers = [234, 567, 891, 123, 456, ...]
 result = sum(n for n in numbers if n % 3 == 0 or n % 5 == 0)
-print(result)  # Submit: 1545
+print(result)  # Submit this answer!
 ```
 
-**First to submit correct answer wins!** 🏆
-
-## 📡 API Endpoints
-
-- `GET /api/v1/matches/puzzles` - List puzzles
-- `POST /api/v1/matches/matches/create` - Create match
-- `POST /api/v1/matches/matches/join` - Join match  
-- `POST /api/v1/matches/matches/{id}/start` - Start match
-- `POST /api/v1/matches/matches/{id}/submit` - Submit answer
-- `GET /api/v1/matches/leaderboard` - Global rankings
-- `WS /api/v1/ws/match/{id}` - Real-time updates
-
-Full API docs: `http://localhost:8000/docs`
-
-## 🎨 Customization
-
-The UI uses Advent of Code's aesthetic. Customize in:
-- Colors: `newfront_end/src/components/Layout.css`
-- Components: Individual `.css` files
-- New puzzles: `backend/app/services/puzzle_generators.py`
-
-## 🛠️ Tech Stack
-
-**Backend:**
-- FastAPI (Python)
-- PostgreSQL + SQLAlchemy
-- WebSockets
-- JWT Authentication
-
-**Frontend:**
-- React 18
-- React Router
-- Axios
-- WebSocket Client
-- AoC-inspired CSS
-
-## 📊 Database Schema
-
-Key tables:
-- `puzzles` - Puzzle definitions with generators
-- `matches` - 1v1 game sessions
-- `player_puzzle_inputs` - Unique inputs per player
-- `player_answers` - Answer submissions
-- `match_stats` - Win/loss records, streaks
-- `leaderboard` (view) - Global rankings
-
-## 🤝 Contributing
-
-Want to add more puzzles? Check out `puzzle_generators.py` and create a new generator class!
-
-## 📝 License
-
-MIT License - Feel free to use and modify!
-
-## 🎉 What's Next?
-
-Ideas for future features:
-- Tournament mode (bracket-style)
-- Daily challenges
-- Team matches (2v2, 3v3)
-- Custom puzzle creator
-- Discord bot integration
-- Puzzle difficulty voting
-- Hints system
+**First to submit the correct answer wins the match!**
 
 ---
 
-**Happy puzzling! May the fastest solver win!** ⚔️🏆
+## 🛠️ Tech Stack
+
+- **Backend:** FastAPI, PostgreSQL, SQLAlchemy, WebSockets, JWT
+- **Frontend:** React 18, React Router, Axios, WebSocket API
+- **Deployment:** Docker, Docker Compose, Nginx
+
+---
+
+## 🗂️ Project Structure
+
+```
+CodeArena/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/endpoints/    # API routes
+│   │   ├── core/                # Config & security
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── schemas/             # Pydantic schemas
+│   │   ├── services/            # Puzzle generators, match logic
+│   │   └── main.py              # FastAPI app
+│   ├── migrations/              # SQL migrations
+│   └── scripts/                 # Data seeding
+├── newfront_end/                # React frontend (AoC style)
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── context/
+│   │   └── services/
+│   └── public/
+├── docker/                      # Dockerfiles & nginx config
+├── docs/                        # Architecture, schema, guides
+└── ...
+```
+
+---
+
+## 📚 Documentation
+
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - How to add puzzles, pages, endpoints, and more
+- [PUZZLE_PLATFORM_GUIDE.md](PUZZLE_PLATFORM_GUIDE.md) - Full setup and usage
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design
+- [FEATURES.md](FEATURES.md) - Feature checklist
+
+---
+
+## 🧑‍💻 Developer Notes
+
+- **Add puzzles:** See `backend/app/services/puzzle_generators.py`
+- **Add pages:** See `newfront_end/src/pages/`
+- **API:** See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for full extension guide
+- **Remove old frontend:** Only `newfront_end/` is used
+
+---
+
+## 🚧 Roadmap
+
+- [ ] WebSocket support for real-time updates
+- [ ] Contest system with timed challenges
+- [ ] Leaderboard and rankings
+- [ ] More programming languages (Rust, Go, Ruby)
+- [ ] Code editor with syntax highlighting
+- [ ] Problem difficulty ratings
+- [ ] User profiles and statistics
+- [ ] Problem tags and filtering
+- [ ] Solution discussions and comments
+- [ ] Admin dashboard for problem management
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m "feat: add your feature"`
+4. Push to the branch: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+**Commit Convention:**
+
+- `feat:` New feature
+- `fix:` Bug fix
+- `refactor:` Code refactoring
+- `docs:` Documentation changes
+- `chore:` Maintenance tasks
+- `test:` Test additions or changes
+
+---
+
+## 📄 License
+
+MIT License - feel free to use, modify, and share for learning and development.
+
+---
+
+## 👥 Authors
+
+- **Imad Oulasri** ([@ioulasri](https://github.com/ioulasri)) - Creator & Lead Developer
+
+---
+
+## 🙏 Acknowledgments
+
+- FastAPI for the amazing web framework
+- React for the frontend library
+- Docker for containerization
+- PostgreSQL for reliable data storage
+
+---
+
+**Happy puzzling! May the fastest solver win!** 🎄🏆
 
 2. **Start all services**
    ```bash
