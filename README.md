@@ -1,59 +1,167 @@
-# CodeArena
+# CodeArena - Competitive Puzzle Platform 🏆
 
-A competitive programming platform with a terminal-style interface for solving coding challenges. Features Docker-based code execution, multi-language support, and real-time submission evaluation.
+An **Advent of Code-inspired** competitive puzzle platform where players race to solve unique challenges in real-time 1v1 matches!
 
 ## ✨ Features
 
-- 🖥️ **Terminal-Style UI** - Black screen with green text for the authentic hacker experience
-- 🔐 **Authentication System** - Secure user registration and login with JWT tokens
-- 📝 **Problem Browser** - Browse and solve coding challenges by difficulty and category
-- 💻 **Multi-Language Support** - Python, JavaScript, Java, and C++
-- 🐳 **Sandboxed Execution** - Safe code execution in isolated Docker containers
-- ⚡ **Real-Time Evaluation** - Instant feedback with test case validation
-- 📊 **Submission History** - Track your progress and previous attempts
+- 🎯 **Unique Puzzle Inputs** - Each player gets different input data for fair competition
+- ⚔️ **1v1 Real-Time Matches** - Challenge friends or find random opponents
+- 🔴 **Live WebSocket Updates** - See opponent progress in real-time
+- 🧩 **5 Puzzle Types** - Math, sequences, grids, patterns, and more
+- 🏅 **Global Leaderboards** - Track wins, fastest times, and streaks
+- 🎨 **AoC-Style UI** - Beautiful retro terminal aesthetic
+- 🔧 **Solve Anywhere** - Use your own IDE, just submit the answer!
 
-## Project Structure
+## 🎮 How It Works
 
-```
-codearena/
-├── backend/                 # FastAPI application
-│   ├── app/                # Application code
-│   ├── tests/              # Backend tests
-│   ├── .env.example        # Environment variables template
-│   ├── requirements.txt    # Python dependencies
-│   └── README.md           # Backend documentation
-├── frontend/                # React.js application
-│   ├── public/             # Static files
-│   ├── src/                # React components
-│   ├── .env.example        # Environment variables template
-│   ├── package.json        # Node dependencies
-│   └── README.md           # Frontend documentation
-├── docker/                  # Docker configurations
-│   ├── backend.dockerfile  # Backend container
-│   ├── frontend.dockerfile # Frontend container
-│   └── nginx.conf          # Nginx configuration
-├── docs/                    # Documentation
-│   ├── architecture.md     # System architecture
-│   ├── database-schema.md  # Database design
-│   └── setup-guide.md      # Setup instructions
-├── docker-compose.yml       # Local development orchestration
-└── README.md                # This file
+1. **Choose a Puzzle** - Browse the calendar of daily challenges
+2. **Start a Match** - Create a public/private room or join existing
+3. **Get Unique Input** - Receive your personalized puzzle data
+4. **Solve in Your IDE** - Use Python, JS, or any language you prefer
+5. **Submit Answer** - Enter your solution on the website
+6. **First Correct Wins!** 🏆
+
+## 🚀 Quick Start
+
+### Using the Setup Script
+
+```bash
+./setup.sh
 ```
 
-## Quick Start
+Then follow the instructions to start backend and frontend!
 
-### Prerequisites
+### Manual Setup
 
-- Docker and Docker Compose installed
-- Git
+**Backend:**
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
 
-### 🚀 Running with Docker (Recommended)
+**Frontend:**
+```bash
+cd newfront_end
+npm install
+npm start
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/CodeArena.git
-   cd CodeArena
-   ```
+**Database:**
+```bash
+createdb codearena
+psql -d codearena < backend/migrations/001_initial_schema.sql
+psql -d codearena < backend/migrations/002_puzzle_match_schema.sql
+```
+
+📚 **Full Setup Guide:** See [PUZZLE_PLATFORM_GUIDE.md](PUZZLE_PLATFORM_GUIDE.md)
+
+## 🧩 Available Puzzles
+
+1. **Day 1: Crystal Cave Numbers** (Easy)  
+   Find the sum of all multiples of 3 or 5
+
+2. **Day 2: Encrypted Scroll** (Medium)  
+   Count pattern occurrences including overlaps
+
+3. **Day 3: Magic Grid** (Medium)  
+   Find maximum sum path (only right/down moves)
+
+4. **Day 4: Sequence Cipher** (Hard)  
+   Predict the next 3 numbers in a sequence
+
+5. **Day 5: Tower of Blocks** (Hard)  
+   Find maximum value by strategic block removal
+
+## 🎯 Example Gameplay
+
+**Puzzle Input (unique to you):**
+```
+234
+567
+891
+123
+456
+...
+```
+
+**Your Solution (any language):**
+```python
+numbers = [234, 567, 891, 123, 456, ...]
+result = sum(n for n in numbers if n % 3 == 0 or n % 5 == 0)
+print(result)  # Submit: 1545
+```
+
+**First to submit correct answer wins!** 🏆
+
+## 📡 API Endpoints
+
+- `GET /api/v1/matches/puzzles` - List puzzles
+- `POST /api/v1/matches/matches/create` - Create match
+- `POST /api/v1/matches/matches/join` - Join match  
+- `POST /api/v1/matches/matches/{id}/start` - Start match
+- `POST /api/v1/matches/matches/{id}/submit` - Submit answer
+- `GET /api/v1/matches/leaderboard` - Global rankings
+- `WS /api/v1/ws/match/{id}` - Real-time updates
+
+Full API docs: `http://localhost:8000/docs`
+
+## 🎨 Customization
+
+The UI uses Advent of Code's aesthetic. Customize in:
+- Colors: `newfront_end/src/components/Layout.css`
+- Components: Individual `.css` files
+- New puzzles: `backend/app/services/puzzle_generators.py`
+
+## 🛠️ Tech Stack
+
+**Backend:**
+- FastAPI (Python)
+- PostgreSQL + SQLAlchemy
+- WebSockets
+- JWT Authentication
+
+**Frontend:**
+- React 18
+- React Router
+- Axios
+- WebSocket Client
+- AoC-inspired CSS
+
+## 📊 Database Schema
+
+Key tables:
+- `puzzles` - Puzzle definitions with generators
+- `matches` - 1v1 game sessions
+- `player_puzzle_inputs` - Unique inputs per player
+- `player_answers` - Answer submissions
+- `match_stats` - Win/loss records, streaks
+- `leaderboard` (view) - Global rankings
+
+## 🤝 Contributing
+
+Want to add more puzzles? Check out `puzzle_generators.py` and create a new generator class!
+
+## 📝 License
+
+MIT License - Feel free to use and modify!
+
+## 🎉 What's Next?
+
+Ideas for future features:
+- Tournament mode (bracket-style)
+- Daily challenges
+- Team matches (2v2, 3v3)
+- Custom puzzle creator
+- Discord bot integration
+- Puzzle difficulty voting
+- Hints system
+
+---
+
+**Happy puzzling! May the fastest solver win!** ⚔️🏆
 
 2. **Start all services**
    ```bash

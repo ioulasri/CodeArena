@@ -1,0 +1,9 @@
+/* Add any global app-specific styles here */
+
+/* Example: Custom styling for specific pages */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* You can override component styles here if needed */

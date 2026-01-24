@@ -1,0 +1,65 @@
+.day-desc {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1em;
+}
+
+.day-desc h2 {
+  color: #ffff66;
+  font-size: 1.4em;
+  font-weight: normal;
+  margin: 1em 0;
+}
+
+.day-desc p {
+  margin: 1em 0;
+  line-height: 1.6;
+}
+
+.day-desc a {
+  color: #9f9;
+  text-decoration: none;
+}
+
+.day-desc a:hover {
+  text-decoration: underline;
+}
+
+.day-desc em {
+  color: #fff;
+  font-style: normal;
+  text-shadow: 0 0 5px #fff;
+}
+
+.day-desc em.star {
+  color: #ffff66;
+  text-shadow: 0 0 5px #ffff66;
+}
+
+.day-desc code {
+  font-family: 'Source Code Pro', monospace;
+  color: #fff;
+  background: #10101a;
+  padding: 0.2em 0.4em;
+  border: 1px solid #333;
+  border-radius: 3px;
+}
+
+.day-desc ul {
+  list-style-type: none;
+  padding-left: 2em;
+}
+
+.day-desc li {
+  margin: 0.5em 0;
+}
+
+.day-desc li:before {
+  content: "- ";
+  margin-left: -1em;
+  color: #666;
+}
+
+.day-desc.completed h2:after {
+  content: " ⭐";
+}

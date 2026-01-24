@@ -1,0 +1,55 @@
+/* ============================================
+   MAIN COLORS - CHANGE THESE FOR YOUR THEME
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.aoc-layout {
+  /* 🎨 BACKGROUND COLOR - Change this for main background */
+  background: #000045;  /* Dark blue-purple */
+  
+  /* 🎨 TEXT COLOR - Change this for main text */
+  color: #ccc;  /* Light gray */
+  
+  font-family: 'Source Code Pro', monospace;
+  font-size: 14pt;
+  min-height: 100vh;
+  padding: 1em;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-right: 220px; /* Space for sidebar */
+}
+
+/* 🎨 LINK COLORS - Change these for all links */
+a {
+  color: #9f9;  /* Bright green - default link color */
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  main {
+    padding-right: 0;
+  }
+}
+
+/* Utility classes */
+.quiet {
+  color: #666;  /* 🎨 Muted text color */
+}
+
+.star {
+  color: #ffff66 !important;  /* 🎨 Star color (yellow) */
+  text-shadow: 0 0 5px #ffff66;
+}

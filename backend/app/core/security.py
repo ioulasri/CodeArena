@@ -42,3 +42,23 @@ def decode_token(token: str) -> Optional[dict]:
         return payload
     except JWTError:
         return None
+
+
+async def get_current_user_ws(token: str, db) -> Optional[object]:
+    """Get current user from WebSocket token"""
+    from app.models.user import User
+    
+    payload = decode_token(token)
+    if not payload:
+        return None
+    
+    username = payload.get("sub")
+    user = db.query(User).filter(User.username == username).first()
+    
+    return user
+
+
+def get_current_user(authorization: str, db) -> object:
+    """Get current user from HTTP header - import from auth endpoint"""
+    from app.api.v1.endpoints.auth import get_current_user_dependency
+    return get_current_user_dependency

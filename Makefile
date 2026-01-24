@@ -31,7 +31,7 @@ help:
 
 # Docker Commands
 up:
-	docker-compose up -d postgres backend
+	docker-compose up -d postgres backend frontend
 
 down:
 	docker-compose down
@@ -44,11 +44,12 @@ restart:
 
 clean:
 	docker-compose down -v
-	rm -rf backend/venv frontend/node_modules
+	rm -rf backend/venv newfront_end/node_modules
 
 # Database Commands
 db-migrate:
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/001_initial_schema.sql
+	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/002_puzzle_match_schema.sql
 
 db-reset:
 	docker exec -i codearena-db psql -U postgres -c "DROP DATABASE IF EXISTS codearena;"
@@ -76,10 +77,10 @@ backend-shell:
 
 # Frontend Commands
 frontend-install:
-	cd frontend && npm install
+	cd newfront_end && npm install
 
 frontend-run:
-	cd frontend && npm start
+	cd newfront_end && npm start
 
 frontend-build:
-	cd frontend && npm run build
+	cd newfront_end && npm run build
