@@ -354,7 +354,30 @@ class MatchService:
         try:
             query = text('SELECT * FROM leaderboard LIMIT :limit')
             result = db.execute(query, {"limit": limit})
-            return [dict(row) for row in result]
+            rows = []
+            for row in result:
+                # SQLAlchemy Row supports ._mapping for dict-like access
+                if hasattr(row, '_mapping'):
+                    rows.append(dict(row._mapping))
+                else:
+                    try:
+                        rows.append(dict(row))
+                    except Exception:
+                        # Fallback to manual conversion
+                        rows.append({k: v for k, v in row})
+
+            # Normalize: if a user has 0 matches, show zeros for puzzle stats
+            for r in rows:
+                try:
+                    if int(r.get('total_matches') or 0) == 0:
+                        r['total_puzzles_solved'] = 0
+                        r['fastest_solve_seconds'] = 0
+                        r['average_solve_seconds'] = 0
+                except Exception:
+                    # If conversion fails, skip normalization for that row
+                    pass
+
+            return rows
         except Exception:
             # Fallback: aggregate from match_stats and users
             fallback_q = text(
@@ -367,4 +390,24 @@ class MatchService:
                 "LIMIT :limit"
             )
             result = db.execute(fallback_q, {"limit": limit})
-            return [dict(row) for row in result]
+            rows = []
+            for row in result:
+                if hasattr(row, '_mapping'):
+                    rows.append(dict(row._mapping))
+                else:
+                    try:
+                        rows.append(dict(row))
+                    except Exception:
+                        rows.append({k: v for k, v in row})
+
+            # Normalize: if a user has 0 matches, show zeros for puzzle stats
+            for r in rows:
+                try:
+                    if int(r.get('total_matches') or 0) == 0:
+                        r['total_puzzles_solved'] = 0
+                        r['fastest_solve_seconds'] = 0
+                        r['average_solve_seconds'] = 0
+                except Exception:
+                    pass
+
+            return rows
