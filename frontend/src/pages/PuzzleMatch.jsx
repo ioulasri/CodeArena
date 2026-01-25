@@ -53,6 +53,7 @@ const PuzzleMatch = () => {
   
   const wsRef = useRef(null);
   const timerRef = useRef(null);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     // Try to resolve puzzleId (may be a day or id)
@@ -278,8 +279,9 @@ const PuzzleMatch = () => {
   };
 
   const handleSubmitAnswer = async () => {
-    if (!answer.trim()) return;
+    if (!answer.trim() || loading || submittingRef.current) return;
     
+    submittingRef.current = true;
     setLoading(true);
     try {
       const response = await matchesAPI.submitAnswer(matchId, answer.trim());
@@ -302,6 +304,7 @@ const PuzzleMatch = () => {
       setFeedback({ type: 'error', message: 'Failed to submit answer' });
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
