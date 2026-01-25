@@ -15,6 +15,10 @@ from app.services.puzzle_generators import PuzzleGeneratorFactory
 from app.schemas.puzzle import MatchResponse, MatchDetailResponse
 from app.services.websocket_manager import manager
 import asyncio
+import logging
+from sqlalchemy import text
+
+logger = logging.getLogger(__name__)
 
 
 class MatchService:
@@ -223,10 +227,12 @@ class MatchService:
                 "message": "You already submitted the correct answer"
             }
         
-        # Normalize answers (strip whitespace, lowercase)
-        submitted = answer.strip().lower()
-        expected = player_input.expected_answer.strip().lower()
-        is_correct = submitted == expected
+        # Normalize answers (strip whitespace, lowercase) and handle non-string/None safely
+        submitted = str(answer).strip().lower() if answer is not None else ""
+        expected_raw = getattr(player_input, 'expected_answer', None)
+        expected = str(expected_raw).strip().lower() if expected_raw is not None else ""
+        # If expected is not set, treat as incorrect rather than raising
+        is_correct = (submitted == expected) and expected != ""
         
         # Calculate time taken
         time_taken = int((datetime.utcnow() - match.started_at).total_seconds()) if match.started_at else None
@@ -236,7 +242,7 @@ class MatchService:
             match_id=match.id,
             player_id=user_id,
             puzzle_id=match.puzzle_id,
-            submitted_answer=answer,
+            submitted_answer=str(answer) if answer is not None else None,
             is_correct=is_correct,
             time_taken_seconds=time_taken
         )
@@ -247,11 +253,59 @@ class MatchService:
             match.winner_id = user_id
             match.status = 'completed'
             match.completed_at = datetime.utcnow()
-            
-            # Update stats
-            MatchService._update_player_stats(db, user_id, time_taken, True)
-        
-        db.commit()
+
+            # Safely upsert match_stats for winner and loser to avoid duplicate-insert race
+            try:
+                # Winner upsert: increment total_matches and matches_won, increment puzzles solved and update times
+                winner_params = {
+                    'user_id': user_id,
+                    'total_matches': 1,
+                    'matches_won': 1,
+                    'matches_lost': 0,
+                    'total_puzzles_solved': 1 if is_correct else 0,
+                    'fastest_solve_seconds': time_taken if time_taken is not None else None,
+                    'average_solve_seconds': float(time_taken) if time_taken is not None else None,
+                }
+                upsert_sql = text(
+                    "INSERT INTO match_stats (user_id, total_matches, matches_won, matches_lost, total_puzzles_solved, fastest_solve_seconds, average_solve_seconds, current_streak, best_streak, updated_at) "
+                    "VALUES (:user_id, :total_matches, :matches_won, :matches_lost, :total_puzzles_solved, :fastest_solve_seconds, :average_solve_seconds, 0, 0, now()) "
+                    "ON CONFLICT (user_id) DO UPDATE SET "
+                    "total_matches = COALESCE(match_stats.total_matches,0) + EXCLUDED.total_matches, "
+                    "matches_won = COALESCE(match_stats.matches_won,0) + EXCLUDED.matches_won, "
+                    "matches_lost = COALESCE(match_stats.matches_lost,0) + EXCLUDED.matches_lost, "
+                    "total_puzzles_solved = COALESCE(match_stats.total_puzzles_solved,0) + EXCLUDED.total_puzzles_solved, "
+                    "fastest_solve_seconds = LEAST(COALESCE(match_stats.fastest_solve_seconds, 9999999), COALESCE(EXCLUDED.fastest_solve_seconds, 9999999)), "
+                    "average_solve_seconds = CASE WHEN COALESCE(match_stats.total_puzzles_solved,0) = 0 THEN EXCLUDED.average_solve_seconds "
+                    "ELSE ((COALESCE(match_stats.average_solve_seconds,0) * COALESCE(match_stats.total_puzzles_solved,0) + COALESCE(EXCLUDED.average_solve_seconds,0)) / (COALESCE(match_stats.total_puzzles_solved,0) + COALESCE(EXCLUDED.total_puzzles_solved,0))) END, "
+                    "updated_at = now()"
+                )
+                db.execute(upsert_sql, winner_params)
+
+                # Loser upsert: increment total_matches and matches_lost
+                opponent_id = match.player1_id if user_id == match.player2_id else match.player2_id
+                if opponent_id:
+                    loser_params = {
+                        'user_id': opponent_id,
+                        'total_matches': 1,
+                        'matches_won': 0,
+                        'matches_lost': 1,
+                        'total_puzzles_solved': 0,
+                        'fastest_solve_seconds': None,
+                        'average_solve_seconds': None,
+                    }
+                    db.execute(upsert_sql, loser_params)
+            except Exception:
+                logger.exception("Failed upserting match_stats during submit_answer")
+
+        try:
+            db.commit()
+        except Exception as e:
+            logger.exception("Database commit failed in submit_answer")
+            try:
+                db.rollback()
+            except Exception:
+                logger.exception("Rollback also failed")
+            raise
         # Notify via websocket about the submission
         try:
             asyncio.create_task(manager.notify_answer_submitted(str(match.id), user_id, is_correct))
@@ -304,7 +358,12 @@ class MatchService:
                     total_time = stats.average_solve_seconds * (stats.total_puzzles_solved - 1) + solve_time
                     stats.average_solve_seconds = total_time / stats.total_puzzles_solved
 
-        db.commit()
+        # Do not commit here; caller should commit to keep transactional integrity
+        try:
+            db.flush()
+        except Exception:
+            # If flush fails, log and continue; caller will handle rollback/commit
+            logger.exception("Flush failed in _update_player_stats")
     
     @staticmethod
     def get_match_details(db: Session, match_id: str, user_id: int) -> dict:

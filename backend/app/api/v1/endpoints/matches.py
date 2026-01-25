@@ -195,14 +195,24 @@ async def get_user_match_history(
             PlayerAnswer.is_correct == True
         ).first()
         
+        # Return fields the frontend expects
         history.append({
-            "match_id": str(match.id),
+            "id": str(match.id),
+            "created_at": match.created_at,
+            "puzzle_id": puzzle.id if puzzle else None,
             "puzzle_day": puzzle.day if puzzle else 0,
             "puzzle_title": puzzle.title if puzzle else "Unknown",
-            "opponent_username": opponent.username if opponent else "Waiting...",
+            "player1_username": db.query(User).filter(User.id == match.player1_id).first().username if match.player1_id else None,
+            "player2_username": db.query(User).filter(User.id == match.player2_id).first().username if match.player2_id else None,
+            "winner_username": db.query(User).filter(User.id == match.winner_id).first().username if match.winner_id else None,
+            "opponent_username": (
+                "Solo" if opponent is None and (match.player1_id == current_user.id or match.player2_id == current_user.id) and (match.player1_id is None or match.player2_id is None)
+                else (opponent.username if opponent else "Waiting...")
+            ),
             "won": won,
             "status": match.status,
             "time_taken_seconds": answer.time_taken_seconds if answer else None,
+            "solve_time_seconds": answer.time_taken_seconds if answer else None,
             "completed_at": match.completed_at
         })
     
@@ -259,3 +269,95 @@ async def get_my_stats(
         "current_streak": stats.current_streak,
         "best_streak": stats.best_streak
     }
+
+
+@router.get("/stats/{username}", response_model=MatchStatsResponse)
+async def get_user_stats(
+    username: str,
+    db: Session = Depends(get_db)
+):
+    """Get another user's statistics by username"""
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    from app.models.puzzle import MatchStats
+    stats = db.query(MatchStats).filter(MatchStats.user_id == user.id).first()
+
+    if not stats:
+        return {
+            "user_id": user.id,
+            "username": user.username,
+            "total_matches": 0,
+            "matches_won": 0,
+            "matches_lost": 0,
+            "win_rate": 0.0,
+            "total_puzzles_solved": 0,
+            "fastest_solve_seconds": None,
+            "average_solve_seconds": None,
+            "current_streak": 0,
+            "best_streak": 0
+        }
+
+    win_rate = (stats.matches_won / stats.total_matches * 100) if stats.total_matches > 0 else 0.0
+
+    return {
+        "user_id": user.id,
+        "username": user.username,
+        "total_matches": stats.total_matches,
+        "matches_won": stats.matches_won,
+        "matches_lost": stats.matches_lost,
+        "win_rate": round(win_rate, 2),
+        "total_puzzles_solved": stats.total_puzzles_solved,
+        "fastest_solve_seconds": stats.fastest_solve_seconds,
+        "average_solve_seconds": round(stats.average_solve_seconds, 2) if stats.average_solve_seconds else None,
+        "current_streak": stats.current_streak,
+        "best_streak": stats.best_streak
+    }
+
+
+@router.get("/matches/user/{username}/history")
+async def get_user_match_history_by_username(
+    username: str,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    """Get match history for a given username"""
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    matches = MatchService.get_user_matches(db, user.id, limit)
+    history = []
+    for match in matches:
+        puzzle = db.query(Puzzle).filter(Puzzle.id == match.puzzle_id).first()
+        opponent_id = match.player2_id if match.player1_id == user.id else match.player1_id
+        opponent = db.query(User).filter(User.id == opponent_id).first() if opponent_id else None
+        won = match.winner_id == user.id
+        from app.models.puzzle import PlayerAnswer
+        answer = db.query(PlayerAnswer).filter(
+            PlayerAnswer.match_id == match.id,
+            PlayerAnswer.player_id == user.id,
+            PlayerAnswer.is_correct == True
+        ).first()
+
+        history.append({
+            "id": str(match.id),
+            "created_at": match.created_at,
+            "puzzle_id": puzzle.id if puzzle else None,
+            "puzzle_day": puzzle.day if puzzle else 0,
+            "puzzle_title": puzzle.title if puzzle else "Unknown",
+            "player1_username": db.query(User).filter(User.id == match.player1_id).first().username if match.player1_id else None,
+            "player2_username": db.query(User).filter(User.id == match.player2_id).first().username if match.player2_id else None,
+            "winner_username": db.query(User).filter(User.id == match.winner_id).first().username if match.winner_id else None,
+            "opponent_username": (
+                "Solo" if opponent is None and (match.player1_id == user.id or match.player2_id == user.id) and (match.player1_id is None or match.player2_id is None)
+                else (opponent.username if opponent else "Waiting...")
+            ),
+            "won": won,
+            "time_taken_seconds": answer.time_taken_seconds if answer else None,
+            "solve_time_seconds": answer.time_taken_seconds if answer else None,
+            "completed_at": match.completed_at
+        })
+
+    return history

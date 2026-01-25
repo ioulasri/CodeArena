@@ -73,7 +73,15 @@ export const matchesAPI = {
 export const statsAPI = {
   getMyStats: () =>
     api.get('/matches/stats/me'),
-  
+  getMyMatchHistory: (limit = 50) =>
+    api.get(`/matches/matches/user/history?limit=${limit}`),
+
+  getUserMatchHistory: (username, limit = 50) =>
+    api.get(`/matches/matches/user/${encodeURIComponent(username)}/history?limit=${limit}`),
+
+  getUserStats: (username) =>
+    api.get(`/matches/stats/${encodeURIComponent(username)}`),
+
   getLeaderboard: (limit = 100) =>
     api.get(`/matches/leaderboard?limit=${limit}`),
 };
