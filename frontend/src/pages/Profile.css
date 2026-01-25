@@ -1,0 +1,384 @@
+
+.profile-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Profile Header */
+.profile-header {
+  margin-bottom: 2em;
+}
+
+.profile-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5em;
+}
+
+.edit-profile-btn {
+  padding: 0.6em 1.2em;
+  background: #003300;
+  border: 2px solid #9f9;
+  color: #9f9;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.edit-profile-btn:hover {
+  background: #9f9;
+  color: #000033;
+  transform: translateY(-2px);
+}
+
+.profile-main {
+  display: flex;
+  gap: 2em;
+  align-items: flex-start;
+}
+
+.profile-avatar {
+  flex-shrink: 0;
+}
+
+.avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border: 3px solid #9f9;
+  background: rgba(0, 50, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+  font-weight: bold;
+  color: #9f9;
+  border-radius: 5px;
+  box-shadow: 0 0 20px rgba(153, 255, 153, 0.3);
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-info .username {
+  font-size: 2.5em;
+  color: #9f9;
+  margin: 0 0 0.5em 0;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(153, 255, 153, 0.5);
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.5em 1em;
+  border: 2px solid;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-bottom: 1em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.rank-icon {
+  font-size: 1.3em;
+}
+
+.profile-stats-quick {
+  display: flex;
+  gap: 2em;
+  margin: 1.5em 0;
+  flex-wrap: wrap;
+}
+
+.quick-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+}
+
+.quick-stat .stat-label {
+  font-size: 0.85em;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.quick-stat .stat-value {
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #9f9;
+}
+
+.quick-stat .stat-value.win {
+  color: #00ff00;
+}
+
+.quick-stat .stat-value.streak {
+  color: #ff6600;
+  animation: fireGlow 1.5s infinite;
+}
+
+.member-since {
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 1em;
+  font-style: italic;
+}
+
+/* Statistics Detail */
+.stats-detail {
+  margin-bottom: 2em;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5em;
+  margin: 2em 0;
+}
+
+.stat-card {
+  background: rgba(0, 50, 0, 0.2);
+  border: 2px solid #333366;
+  padding: 1.5em;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  border-color: #9f9;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(153, 255, 153, 0.2);
+}
+
+.stat-card-icon {
+  font-size: 2.5em;
+  margin-bottom: 0.3em;
+}
+
+.stat-card-value {
+  font-size: 2em;
+  font-weight: bold;
+  color: #9f9;
+  margin-bottom: 0.3em;
+  font-family: 'Source Code Pro', monospace;
+}
+
+.stat-card-value.success {
+  color: #00ff00;
+}
+
+.stat-card-value.streak {
+  color: #ff6600;
+  animation: fireGlow 1.5s infinite;
+}
+
+.stat-card-label {
+  font-size: 0.85em;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Match History */
+.match-history {
+  margin-bottom: 2em;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3em;
+  color: #999;
+  font-style: italic;
+}
+
+.history-table-container {
+  overflow-x: auto;
+  margin: 2em 0;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Source Code Pro', monospace;
+}
+
+.history-table thead {
+  background: rgba(0, 50, 0, 0.3);
+  border-bottom: 2px solid #9f9;
+}
+
+.history-table th {
+  padding: 1em;
+  text-align: left;
+  color: #9f9;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9em;
+}
+
+.history-table td {
+  padding: 0.8em 1em;
+  border-bottom: 1px solid #333366;
+}
+
+.history-table tr {
+  transition: background 0.3s;
+}
+
+.history-table tr:hover {
+  background: rgba(153, 255, 153, 0.05);
+}
+
+.history-table tr.match-won {
+  border-left: 3px solid #00ff00;
+}
+
+.history-table tr.match-lost {
+  border-left: 3px solid #666;
+}
+
+.match-date {
+  color: #999;
+  font-size: 0.9em;
+}
+
+.puzzle-link,
+.opponent-link {
+  background: none;
+  border: none;
+  color: #9f9;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: 'Source Code Pro', monospace;
+  font-size: inherit;
+  padding: 0;
+  transition: color 0.3s;
+}
+
+.puzzle-link:hover,
+.opponent-link:hover {
+  color: #ffff66;
+}
+
+.no-opponent {
+  color: #666;
+  font-style: italic;
+}
+
+.match-result {
+  font-weight: bold;
+}
+
+.result-win {
+  color: #00ff00;
+}
+
+.result-loss {
+  color: #ff6666;
+}
+
+.match-time {
+  color: #9999ff;
+  font-family: monospace;
+}
+
+/* Profile Actions */
+.profile-actions {
+  margin-bottom: 2em;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1em;
+  flex-wrap: wrap;
+  margin-top: 1em;
+}
+
+.action-btn {
+  padding: 1em 2em;
+  background: #003300;
+  border: 2px solid #9f9;
+  color: #9f9;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 1em;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.action-btn:hover {
+  background: #9f9;
+  color: #000033;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(153, 255, 153, 0.3);
+}
+
+.action-btn.challenge {
+  border-color: #ffff66;
+  color: #ffff66;
+}
+
+.action-btn.challenge:hover {
+  background: #ffff66;
+  color: #000033;
+  box-shadow: 0 5px 15px rgba(255, 255, 102, 0.3);
+}
+
+/* Animations */
+@keyframes fireGlow {
+  0%, 100% { 
+    text-shadow: 0 0 5px rgba(255, 102, 0, 0.5); 
+  }
+  50% { 
+    text-shadow: 0 0 15px rgba(255, 102, 0, 0.8), 
+                 0 0 25px rgba(255, 102, 0, 0.6); 
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profile-main {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-stats-quick {
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1em;
+  }
+
+  .stat-card {
+    padding: 1em;
+  }
+
+  .history-table {
+    font-size: 0.85em;
+  }
+
+  .history-table th,
+  .history-table td {
+    padding: 0.6em 0.5em;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
+}
