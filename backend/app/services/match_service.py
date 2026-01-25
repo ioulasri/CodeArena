@@ -13,6 +13,8 @@ from app.models.puzzle import Match, Puzzle, PlayerPuzzleInput, PlayerAnswer, Ma
 from app.models.user import User
 from app.services.puzzle_generators import PuzzleGeneratorFactory
 from app.schemas.puzzle import MatchResponse, MatchDetailResponse
+from app.services.websocket_manager import manager
+import asyncio
 
 
 class MatchService:
@@ -112,7 +114,13 @@ class MatchService:
         if not match:
             raise ValueError("Match not found")
         
-        if match.status != 'ready':
+        # Allow start when match is 'ready' (two players),
+        # or allow solo start when match is 'waiting' and no second player exists
+        # and the requesting user is the match creator.
+        if not (
+            match.status == 'ready' or
+            (match.status == 'waiting' and match.player2_id is None and user_id == match.player1_id)
+        ):
             raise ValueError("Match is not ready to start")
         
         if user_id not in [match.player1_id, match.player2_id]:
@@ -125,19 +133,21 @@ class MatchService:
         # Get puzzle
         puzzle = db.query(Puzzle).filter(Puzzle.id == match.puzzle_id).first()
         
-        # Generate unique inputs for both players if not already generated
+        # Generate unique inputs for present players if not already generated
         existing_inputs = db.query(PlayerPuzzleInput).filter(
             PlayerPuzzleInput.match_id == match_id
         ).all()
-        
+
         if not existing_inputs:
-            for player_id in [match.player1_id, match.player2_id]:
+            player_ids = [pid for pid in (match.player1_id, match.player2_id) if pid]
+            for player_id in player_ids:
                 # Generate unique puzzle input
+                params = puzzle.generator_params or {}
                 input_data, expected_answer = PuzzleGeneratorFactory.generate_puzzle_instance(
                     puzzle.generator_type,
-                    puzzle.generator_params
+                    params
                 )
-                
+
                 player_input = PlayerPuzzleInput(
                     match_id=match.id,
                     player_id=player_id,
@@ -154,8 +164,27 @@ class MatchService:
             PlayerPuzzleInput.match_id == match_id,
             PlayerPuzzleInput.player_id == user_id
         ).first()
-        
-        return match, player_input.input_data
+        # Notify any connected WebSocket clients that the match has started
+        try:
+            match_data = {
+                "started_at": match.started_at.isoformat() if match.started_at else None,
+                "puzzle": {
+                    "id": puzzle.id,
+                    "day": puzzle.day,
+                    "title": puzzle.title,
+                    "description": puzzle.description,
+                    "story": puzzle.story,
+                }
+            }
+            asyncio.create_task(manager.notify_match_start(str(match.id), match_data))
+        except Exception:
+            pass
+
+        # Return match and player's input details (including expected answer)
+        return match, {
+            "input_data": player_input.input_data if player_input else None,
+            "expected_answer": player_input.expected_answer if player_input else None
+        }
     
     @staticmethod
     def submit_answer(db: Session, match_id: str, user_id: int, answer: str) -> dict:
@@ -223,7 +252,21 @@ class MatchService:
             MatchService._update_player_stats(db, user_id, time_taken, True)
         
         db.commit()
-        
+        # Notify via websocket about the submission
+        try:
+            asyncio.create_task(manager.notify_answer_submitted(str(match.id), user_id, is_correct))
+        except Exception:
+            pass
+
+        # If match completed, notify about completion (include winner username)
+        if is_correct and match.status == 'completed' and match.winner_id:
+            try:
+                winner = db.query(User).filter(User.id == match.winner_id).first()
+                winner_username = winner.username if winner else None
+                asyncio.create_task(manager.notify_match_completed(str(match.id), match.winner_id, winner_username))
+            except Exception:
+                pass
+
         return {
             "is_correct": is_correct,
             "match_status": match.status,
@@ -241,21 +284,26 @@ class MatchService:
         if not stats:
             stats = MatchStats(user_id=user_id)
             db.add(stats)
-        
+        # Ensure numeric fields are initialized
+        stats.total_matches = stats.total_matches or 0
+        stats.matches_won = stats.matches_won or 0
+        stats.matches_lost = stats.matches_lost or 0
+        stats.total_puzzles_solved = stats.total_puzzles_solved or 0
+
         if solved:
-            stats.total_puzzles_solved += 1
+            stats.total_puzzles_solved = (stats.total_puzzles_solved or 0) + 1
             
             if solve_time:
                 if stats.fastest_solve_seconds is None or solve_time < stats.fastest_solve_seconds:
                     stats.fastest_solve_seconds = solve_time
                 
-                # Update average
+                # Update average safely
                 if stats.average_solve_seconds is None:
                     stats.average_solve_seconds = float(solve_time)
                 else:
                     total_time = stats.average_solve_seconds * (stats.total_puzzles_solved - 1) + solve_time
                     stats.average_solve_seconds = total_time / stats.total_puzzles_solved
-        
+
         db.commit()
     
     @staticmethod
@@ -283,6 +331,7 @@ class MatchService:
             "match": match,
             "puzzle": puzzle,
             "player_input": player_input.input_data if player_input else None,
+            "expected_answer": player_input.expected_answer if player_input else None,
             "player1_username": player1.username if player1 else None,
             "player2_username": player2.username if player2 else None,
             "winner_username": winner.username if winner else None,
@@ -300,10 +349,22 @@ class MatchService:
     @staticmethod
     def get_leaderboard(db: Session, limit: int = 100) -> List[dict]:
         """Get leaderboard"""
-        # Use raw SQL for the view
-        query = """
-            SELECT * FROM leaderboard
-            LIMIT :limit
-        """
-        result = db.execute(query, {"limit": limit})
-        return [dict(row) for row in result]
+        # Prefer DB view `leaderboard` if present, fall back to building from tables
+        from sqlalchemy import text
+        try:
+            query = text('SELECT * FROM leaderboard LIMIT :limit')
+            result = db.execute(query, {"limit": limit})
+            return [dict(row) for row in result]
+        except Exception:
+            # Fallback: aggregate from match_stats and users
+            fallback_q = text(
+                "SELECT u.id, u.username, COALESCE(ms.total_matches,0) as total_matches, "
+                "COALESCE(ms.matches_won,0) as matches_won, COALESCE(ms.matches_lost,0) as matches_lost, "
+                "CASE WHEN COALESCE(ms.total_matches,0) > 0 THEN ROUND((COALESCE(ms.matches_won,0)::float / COALESCE(ms.total_matches,0)::float * 100)::numeric,2) ELSE 0 END as win_rate, "
+                "COALESCE(ms.total_puzzles_solved,0) as total_puzzles_solved, ms.fastest_solve_seconds, ms.average_solve_seconds, ms.current_streak, ms.best_streak "
+                "FROM users u LEFT JOIN match_stats ms ON u.id = ms.user_id "
+                "ORDER BY COALESCE(ms.matches_won,0) DESC, COALESCE(ms.average_solve_seconds,999999) ASC "
+                "LIMIT :limit"
+            )
+            result = db.execute(fallback_q, {"limit": limit})
+            return [dict(row) for row in result]

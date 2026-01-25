@@ -1,11 +1,40 @@
+// DEV WORKFLOW TIP: For instant frontend updates (no rebuilds), add this to your docker-compose.yml under the frontend service ONLY:
+//
+//   services:
+//     frontend:
+//       # ...existing config...
+//       volumes:
+//         - ./frontend:/app/frontend
+//
+// Then run: docker-compose restart frontend
+//
+// This does NOT touch or rebuild the codearena backend image or container.
+// DEV TIP: For instant frontend updates without rebuilding Docker images, add this to your docker-compose.yml (frontend service only):
+//
+//   services:
+//     frontend:
+//       # ...existing config...
+//       volumes:
+//         - ./frontend:/app/frontend
+//
+// Then run: docker-compose restart frontend
+//
+// This does NOT affect the codearena backend image or container.
+
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { puzzlesAPI, matchesAPI, createWebSocketConnection } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './PuzzleMatch.css';
 
 const PuzzleMatch = () => {
-  const { puzzleId } = useParams();
+  const { puzzleId: routePuzzleId } = useParams();
+  const [searchParams] = useSearchParams();
+  // Support puzzleId from query (?puzzle=1) or route param
+  const puzzleId = searchParams.get('puzzle') || routePuzzleId;
+  const [resolvedPuzzleId, setResolvedPuzzleId] = useState(null);
+  // Support mode from query (?mode=quick) or default
+  const modeParam = searchParams.get('mode');
   const navigate = useNavigate();
   const { user, token } = useAuth();
   
@@ -13,6 +42,7 @@ const PuzzleMatch = () => {
   const [match, setMatch] = useState(null);
   const [matchId, setMatchId] = useState(null);
   const [inputData, setInputData] = useState('');
+  const [expectedAnswer, setExpectedAnswer] = useState(null);
   const [answer, setAnswer] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [mode, setMode] = useState('select'); // select, waiting, active, completed
@@ -25,26 +55,50 @@ const PuzzleMatch = () => {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    // Fetch puzzle details
-    const fetchPuzzle = async () => {
+    // Try to resolve puzzleId (may be a day or id)
+    let isMounted = true;
+    const resolveIdAndFetch = async () => {
       try {
+        // Try direct fetch by id
         const response = await puzzlesAPI.getById(puzzleId);
-        setPuzzle(response.data);
+        if (isMounted) {
+          setPuzzle(response.data);
+          setResolvedPuzzleId(response.data.id);
+        }
       } catch (error) {
-        console.error('Failed to fetch puzzle:', error);
+        // If not found, try to map day to id
+        try {
+          const all = await puzzlesAPI.getAll();
+          const found = all.data.find(p => String(p.day) === String(puzzleId));
+          if (found) {
+            const resp2 = await puzzlesAPI.getById(found.id);
+            if (isMounted) {
+              setPuzzle(resp2.data);
+              setResolvedPuzzleId(found.id);
+            }
+          } else {
+            if (isMounted) setPuzzle(null);
+          }
+        } catch (e2) {
+          if (isMounted) setPuzzle(null);
+        }
       }
     };
-    fetchPuzzle();
-    
+    resolveIdAndFetch();
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      isMounted = false;
+      if (wsRef.current) wsRef.current.close();
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [puzzleId]);
+
+  // If the page was opened with ?mode=quick, auto-start a quick (public) match
+  useEffect(() => {
+    if (modeParam === 'quick' && resolvedPuzzleId && !match && !matchId) {
+      // small delay to ensure UI is ready
+      handleCreateMatch(false).catch(err => console.error('Auto quick match failed:', err));
+    }
+  }, [modeParam, resolvedPuzzleId]);
 
   const connectWebSocket = (matchId) => {
     if (!token) return;
@@ -64,8 +118,19 @@ const PuzzleMatch = () => {
         } else if (data.type === 'player_disconnected') {
           setOpponentStatus('disconnected');
         } else if (data.type === 'match_started') {
-          setMode('active');
-          startTimer();
+          // When informed the match started by another player, fetch our player-specific input
+          (async () => {
+            try {
+              const detailsResp = await matchesAPI.getDetails(matchId);
+              const details = detailsResp.data || {};
+              setInputData(details.input_data || '');
+              setExpectedAnswer(details.expected_answer || null);
+              setMode('active');
+              startTimer();
+            } catch (err) {
+              console.error('Failed to fetch match details after websocket start:', err);
+            }
+          })();
         } else if (data.type === 'answer_submitted') {
           if (data.user_id !== user.id) {
             setOpponentStatus(data.is_correct ? 'solved' : 'attempted');
@@ -105,22 +170,31 @@ const PuzzleMatch = () => {
   const handleCreateMatch = async (isPrivate) => {
     setLoading(true);
     try {
+      if (!resolvedPuzzleId) {
+        console.warn('Puzzle not resolved yet, cannot create match.');
+        setFeedback({ type: 'error', message: 'Puzzle not loaded yet. Please wait.' });
+        setLoading(false);
+        return;
+      }
       const code = isPrivate ? generateRoomCode() : null;
-      const response = await matchesAPI.create(puzzleId, code);
+      const pid = resolvedPuzzleId;
+      const response = await matchesAPI.create(pid, code);
       const createdMatch = response.data;
-      
+      console.log('Created match:', createdMatch);
       setMatch(createdMatch);
       setMatchId(createdMatch.id);
-      setMode('waiting');
-      
-      if (isPrivate) {
-        setRoomCode(createdMatch.room_code);
-      }
-      
       connectWebSocket(createdMatch.id);
-      
-      // Auto-start if both players join
-      pollForOpponent(createdMatch.id);
+      // If backend marked match as ready (another player joined), start it.
+      // Also auto-start public quick matches without a room code and without a second player (solo play).
+      if (createdMatch.status === 'ready' || (!createdMatch.room_code && !createdMatch.player2_id)) {
+        await handleStartMatch(createdMatch.id);
+        setMode('active');
+      } else {
+        // Otherwise show waiting room and poll for opponent (private rooms or public waiting)
+        setMode('waiting');
+        if (createdMatch.room_code) setRoomCode(createdMatch.room_code);
+        pollForOpponent(createdMatch.id);
+      }
     } catch (error) {
       console.error('Failed to create match:', error);
       setFeedback({ type: 'error', message: 'Failed to create match' });
@@ -154,6 +228,7 @@ const PuzzleMatch = () => {
     const interval = setInterval(async () => {
       try {
         const response = await matchesAPI.getDetails(matchId);
+        console.log('Poll match details:', response.data);
         const matchData = response.data;
         
         if (matchData.status === 'ready') {
@@ -173,12 +248,32 @@ const PuzzleMatch = () => {
   const handleStartMatch = async (matchId) => {
     try {
       const response = await matchesAPI.start(matchId);
-      setInputData(response.data.input_data);
-      setMode('active');
-      startTimer();
-      setFeedback({ type: 'info', message: 'Match started! Good luck!' });
+      console.log('Start match response:', response.data);
+      // Update match state from response
+      const res = response.data || {};
+      const updatedMatch = {
+        id: res.match_id || matchId,
+        status: res.status || (match && match.status) || 'active',
+        started_at: res.started_at || null,
+      };
+      setMatch(updatedMatch);
+      setMatchId(updatedMatch.id);
+      setInputData(res.input_data || '');
+      setExpectedAnswer(res.expected_answer || null);
+
+      if (res.input_data) {
+        setMode('active');
+        startTimer();
+        setFeedback({ type: 'info', message: 'Match started! Good luck!' });
+      } else {
+        console.warn('No input_data received from backend!', res);
+        setFeedback({ type: 'error', message: 'No puzzle input received. Please try again or contact support.' });
+        // Keep user in waiting state to avoid showing empty input
+        setMode('waiting');
+      }
     } catch (error) {
       console.error('Failed to start match:', error);
+      setFeedback({ type: 'error', message: 'Failed to start match' });
     }
   };
 
@@ -216,10 +311,10 @@ const PuzzleMatch = () => {
     
     const won = data.winner_id === user.id;
     setFeedback({
-      type: won ? 'success' : 'info',
+      type: won ? 'success' : 'error',
       message: won 
         ? `🎉 Congratulations! You won in ${formatTime(timeElapsed)}!`
-        : `Match ended. ${data.winner_username} won!`
+        : `✗ Match lost. ${data.winner_username} solved it.`
     });
   };
 
@@ -268,12 +363,18 @@ const PuzzleMatch = () => {
         <article className="day-desc match-controls">
           <h3>--- Choose Your Challenge ---</h3>
           <p>How would you like to compete?</p>
+
+          {!user && (
+            <div className="auth-warning">
+              <strong>Sign in to create or join matches.</strong>
+            </div>
+          )}
           
           <div className="match-options">
             <button 
               onClick={() => handleCreateMatch(false)}
               className="option-button public"
-              disabled={loading}
+              disabled={loading || !user}
             >
               <div className="option-title">⚔️ Quick Match</div>
               <div className="option-desc">Find a random opponent</div>
@@ -282,7 +383,7 @@ const PuzzleMatch = () => {
             <button 
               onClick={() => handleCreateMatch(true)}
               className="option-button private"
-              disabled={loading}
+              disabled={loading || !user}
             >
               <div className="option-title">🎯 Private Room</div>
               <div className="option-desc">Challenge a friend</div>
@@ -301,7 +402,7 @@ const PuzzleMatch = () => {
               />
               <button 
                 onClick={handleJoinMatch}
-                disabled={!roomCode || loading}
+                disabled={!roomCode || loading || !user}
               >
                 Join
               </button>
@@ -432,6 +533,14 @@ const PuzzleMatch = () => {
           </div>
         </article>
       )}
+
+      {/* Debug Panel */}
+      <div className="debug-panel">
+        <h4>Debug</h4>
+        <pre style={{whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto'}}>
+{JSON.stringify({ mode, matchId, match, inputData, expectedAnswer, feedback }, null, 2)}
+        </pre>
+      </div>
     </div>
   );
 };

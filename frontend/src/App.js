@@ -34,6 +34,15 @@ const ProtectedRoute = ({ children }) => {
 function AppContent() {
   const { user, logout } = useAuth();
 
+  const navigate = (path) => {
+    window.location.href = path;
+  }
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   const navLinks = {
     global: [
       { href: '/', label: 'Calendar' },
@@ -41,15 +50,11 @@ function AppContent() {
     ],
     event: user ? [
       { href: '#', label: user.username },
-      { href: '#', label: 'Logout', onClick: logout },
+      { href: '#', label: 'Logout', onClick: handleLogout },
     ] : [
       { href: '/login', label: 'Login' }
     ]
   };
-
-  const navigate = (path) => {
-    window.location.href = path;
-  }
 
   return (
     <Router>

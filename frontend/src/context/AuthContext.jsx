@@ -40,11 +40,23 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await authAPI.login(username, password);
-      const { access_token, user: userData } = response.data;
-      
-      localStorage.setItem('token', access_token);
+      const { access_token } = response.data;
+
+      // Temporarily set token in memory and call /auth/me with the token
       setToken(access_token);
-      setUser(userData);
+      try {
+        const meResp = await authAPI.getCurrentUserWithToken(access_token);
+        // Persist token only after /me succeeds
+        localStorage.setItem('token', access_token);
+        setUser(meResp.data);
+      } catch (err) {
+        console.error('Failed to fetch current user after login:', err);
+        // Clear token if /me failed
+        setToken(null);
+        localStorage.removeItem('token');
+        setUser(null);
+        return { success: false, error: 'Failed to verify login' };
+      }
       
       return { success: true };
     } catch (error) {

@@ -92,7 +92,7 @@ async def start_match(
     try:
         match, player_input = MatchService.start_match(db, match_id, current_user.id)
         puzzle = db.query(Puzzle).filter(Puzzle.id == match.puzzle_id).first()
-        
+
         return {
             "match_id": str(match.id),
             "status": match.status,
@@ -103,7 +103,8 @@ async def start_match(
                 "description": puzzle.description,
                 "story": puzzle.story
             },
-            "input_data": player_input,
+            "input_data": player_input.get("input_data") if isinstance(player_input, dict) else player_input,
+            "expected_answer": player_input.get("expected_answer") if isinstance(player_input, dict) else None,
             "started_at": match.started_at
         }
     except ValueError as e:
@@ -157,6 +158,7 @@ async def get_match_details(
             "player2_username": details["player2_username"],
             "winner_username": details["winner_username"],
             "input_data": details["player_input"],
+            "expected_answer": details["expected_answer"],
             "started_at": match.started_at,
             "completed_at": match.completed_at,
             "room_code": match.room_code

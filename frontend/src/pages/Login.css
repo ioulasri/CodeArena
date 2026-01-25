@@ -1,3 +1,7 @@
+body {
+  background-color: #bcd2ae;   /* example */
+}
+
 .login-container {
   max-width: 600px;
   margin: 0 auto;

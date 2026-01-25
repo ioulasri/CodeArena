@@ -34,6 +34,9 @@ export const authAPI = {
   
   getCurrentUser: () =>
     api.get('/auth/me'),
+  // allow passing a token directly for initial verification (won't rely on localStorage)
+  getCurrentUserWithToken: (token) =>
+    api.get('/auth/me', token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
 };
 
 // Puzzles API

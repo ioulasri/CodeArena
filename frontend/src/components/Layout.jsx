@@ -5,11 +5,11 @@ import './Layout.css';
 const Layout = ({ 
   children,
   year = '2025',
-  headerNavLinks = null
+  navLinks = null
 }) => {
   return (
     <div className="aoc-layout">
-      <Header year={year} navLinks={headerNavLinks} />
+      <Header year={year} navLinks={navLinks} />
       <main>
         {children}
       </main>

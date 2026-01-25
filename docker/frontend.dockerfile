@@ -7,11 +7,11 @@ ARG REACT_APP_API_URL=http://localhost:8000
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 # Install dependencies
-COPY newfront_end/package*.json ./
+COPY frontend/package*.json ./
 RUN npm install
 
 # Copy application code
-COPY newfront_end/ .
+COPY frontend/ .
 
 # Build the application with environment variable injected
 RUN npm run build
