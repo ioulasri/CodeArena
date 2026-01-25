@@ -7,6 +7,7 @@ import PuzzleDetail from './pages/PuzzleDetail';
 import PuzzleMatch from './pages/PuzzleMatch';
 import Leaderboard from './pages/Leaderboard';
 import Login from './pages/Login';
+import Profile from './pages/Profile';
 import './App.css';
 
 // Protected Route Component
@@ -49,7 +50,7 @@ function AppContent() {
       { href: '/leaderboard', label: 'Leaderboard' },
     ],
     event: user ? [
-      { href: '#', label: user.username },
+      { href: `/profile/${user.username}`, label: user.username },
       { href: '#', label: 'Logout', onClick: handleLogout },
     ] : [
       { href: '/login', label: 'Login' }
@@ -105,6 +106,17 @@ function AppContent() {
           }
         />
         
+        <Route
+          path="/profile/:username"
+          element={
+            <ProtectedRoute>
+              <Layout year="2026" navLinks={navLinks}>
+                <Profile />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

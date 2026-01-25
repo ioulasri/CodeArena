@@ -78,6 +78,12 @@ export const statsAPI = {
     api.get(`/matches/leaderboard?limit=${limit}`),
 };
 
+// Users API
+export const usersAPI = {
+  getProfile: (username) =>
+    api.get(`/users/${encodeURIComponent(username)}/profile`),
+};
+
 // WebSocket connection
 export const createWebSocketConnection = (matchId, token) => {
   const WS_URL = API_URL.replace('http', 'ws').replace('/api/v1', '');
