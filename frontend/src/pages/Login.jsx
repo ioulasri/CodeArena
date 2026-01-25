@@ -49,27 +49,29 @@ const Login = () => {
   return (
     <div className="login-container">
       <article className="day-desc login-box">
-        <h2>--- {mode === 'login' ? 'Sign In' : 'Register'} ---</h2>
+        <h2>--- {mode === 'login' ? 'Sign In' : 'Create Account'} ---</h2>
         
         <p>
           {mode === 'login' 
-            ? 'Welcome back! Enter your credentials to continue your puzzle journey.'
-            : 'Join the arena! Create an account to start challenging others.'
+            ? 'Welcome back, challenger! Enter your credentials to continue your puzzle journey.'
+            : 'Join the arena! Create an account to start competing in epic code battles.'
           }
         </p>
 
         {error && (
           <div className="error-message">
-            <span className="error-icon">⚠</span> {error}
+            <span className="error-icon">⚠</span>
+            <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Username:</label>
+            <label htmlFor="username">Username</label>
             <input
               type="text"
               id="username"
+              placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -80,10 +82,11 @@ const Login = () => {
 
           {mode === 'register' && (
             <div className="form-group">
-              <label htmlFor="email">Email:</label>
+              <label htmlFor="email">Email Address</label>
               <input
                 type="email"
                 id="email"
+                placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -94,10 +97,11 @@ const Login = () => {
           )}
 
           <div className="form-group">
-            <label htmlFor="password">Password:</label>
+            <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -107,7 +111,7 @@ const Login = () => {
           </div>
 
           <button type="submit" className="submit-button" disabled={loading}>
-            {loading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            <span>{loading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}</span>
           </button>
         </form>
 
@@ -116,7 +120,11 @@ const Login = () => {
             <p>
               Don't have an account?{' '}
               <button 
-                onClick={() => setMode('register')}
+                type="button"
+                onClick={() => {
+                  setMode('register');
+                  setError('');
+                }}
                 className="link-button"
                 disabled={loading}
               >
@@ -127,7 +135,11 @@ const Login = () => {
             <p>
               Already have an account?{' '}
               <button 
-                onClick={() => setMode('login')}
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  setError('');
+                }}
                 className="link-button"
                 disabled={loading}
               >
