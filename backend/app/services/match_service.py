@@ -37,6 +37,10 @@ class MatchService:
         if not puzzle:
             raise ValueError("Puzzle not found or not active")
         
+        # Normalize room_code: treat empty strings as None
+        if room_code is not None and isinstance(room_code, str) and room_code.strip() == "":
+            room_code = None
+
         # Generate room code if private match
         if room_code is None:
             # Public match - try to find waiting match first
@@ -227,11 +231,10 @@ class MatchService:
                 "message": "You already submitted the correct answer"
             }
         
-        # Normalize answers (strip whitespace, lowercase) and handle non-string/None safely
+        # Normalize answers
         submitted = str(answer).strip().lower() if answer is not None else ""
         expected_raw = getattr(player_input, 'expected_answer', None)
         expected = str(expected_raw).strip().lower() if expected_raw is not None else ""
-        # If expected is not set, treat as incorrect rather than raising
         is_correct = (submitted == expected) and expected != ""
         
         # Calculate time taken
@@ -254,46 +257,57 @@ class MatchService:
             match.status = 'completed'
             match.completed_at = datetime.utcnow()
 
-            # Safely upsert match_stats for winner and loser to avoid duplicate-insert race
             try:
-                # Winner upsert: increment total_matches and matches_won, increment puzzles solved and update times
+                # ✅ WINNER STATS UPDATE
                 winner_params = {
                     'user_id': user_id,
                     'total_matches': 1,
                     'matches_won': 1,
                     'matches_lost': 0,
-                    'total_puzzles_solved': 1 if is_correct else 0,
+                    'total_puzzles_solved': 1,
                     'fastest_solve_seconds': time_taken if time_taken is not None else None,
                     'average_solve_seconds': float(time_taken) if time_taken is not None else None,
                 }
-                upsert_sql = text(
+                
+                winner_upsert_sql = text(
                     "INSERT INTO match_stats (user_id, total_matches, matches_won, matches_lost, total_puzzles_solved, fastest_solve_seconds, average_solve_seconds, current_streak, best_streak, updated_at) "
                     "VALUES (:user_id, :total_matches, :matches_won, :matches_lost, :total_puzzles_solved, :fastest_solve_seconds, :average_solve_seconds, 0, 0, now()) "
                     "ON CONFLICT (user_id) DO UPDATE SET "
-                    "total_matches = COALESCE(match_stats.total_matches,0) + EXCLUDED.total_matches, "
-                    "matches_won = COALESCE(match_stats.matches_won,0) + EXCLUDED.matches_won, "
-                    "matches_lost = COALESCE(match_stats.matches_lost,0) + EXCLUDED.matches_lost, "
-                    "total_puzzles_solved = COALESCE(match_stats.total_puzzles_solved,0) + EXCLUDED.total_puzzles_solved, "
+                    "total_matches = COALESCE(match_stats.total_matches, 0) + EXCLUDED.total_matches, "
+                    "matches_won = COALESCE(match_stats.matches_won, 0) + EXCLUDED.matches_won, "
+                    "total_puzzles_solved = COALESCE(match_stats.total_puzzles_solved, 0) + EXCLUDED.total_puzzles_solved, "
                     "fastest_solve_seconds = LEAST(COALESCE(match_stats.fastest_solve_seconds, 9999999), COALESCE(EXCLUDED.fastest_solve_seconds, 9999999)), "
-                    "average_solve_seconds = CASE WHEN COALESCE(match_stats.total_puzzles_solved,0) = 0 THEN EXCLUDED.average_solve_seconds "
-                    "ELSE ((COALESCE(match_stats.average_solve_seconds,0) * COALESCE(match_stats.total_puzzles_solved,0) + COALESCE(EXCLUDED.average_solve_seconds,0)) / (COALESCE(match_stats.total_puzzles_solved,0) + COALESCE(EXCLUDED.total_puzzles_solved,0))) END, "
+                    "average_solve_seconds = CASE "
+                    "  WHEN COALESCE(match_stats.total_puzzles_solved, 0) = 0 THEN EXCLUDED.average_solve_seconds "
+                    "  ELSE ((COALESCE(match_stats.average_solve_seconds, 0) * COALESCE(match_stats.total_puzzles_solved, 0) + COALESCE(EXCLUDED.average_solve_seconds, 0)) / (COALESCE(match_stats.total_puzzles_solved, 0) + COALESCE(EXCLUDED.total_puzzles_solved, 0))) "
+                    "END, "
                     "updated_at = now()"
                 )
-                db.execute(upsert_sql, winner_params)
+                db.execute(winner_upsert_sql, winner_params)
 
-                # Loser upsert: increment total_matches and matches_lost
-                opponent_id = match.player1_id if user_id == match.player2_id else match.player2_id
-                if opponent_id:
+                # ✅ LOSER STATS UPDATE - ONLY IF THERE'S AN OPPONENT!
+                # Determine opponent_id
+                if match.player2_id and match.player1_id:
+                    # There are 2 players, find the opponent
+                    opponent_id = match.player2_id if user_id == match.player1_id else match.player1_id
+                    
                     loser_params = {
                         'user_id': opponent_id,
                         'total_matches': 1,
-                        'matches_won': 0,
                         'matches_lost': 1,
-                        'total_puzzles_solved': 0,
-                        'fastest_solve_seconds': None,
-                        'average_solve_seconds': None,
                     }
-                    db.execute(upsert_sql, loser_params)
+                    
+                    loser_upsert_sql = text(
+                        "INSERT INTO match_stats (user_id, total_matches, matches_won, matches_lost, total_puzzles_solved, fastest_solve_seconds, average_solve_seconds, current_streak, best_streak, updated_at) "
+                        "VALUES (:user_id, :total_matches, 0, :matches_lost, 0, NULL, NULL, 0, 0, now()) "
+                        "ON CONFLICT (user_id) DO UPDATE SET "
+                        "total_matches = COALESCE(match_stats.total_matches, 0) + EXCLUDED.total_matches, "
+                        "matches_lost = COALESCE(match_stats.matches_lost, 0) + EXCLUDED.matches_lost, "
+                        "updated_at = now()"
+                    )
+                    db.execute(loser_upsert_sql, loser_params)
+                # else: Solo match, no opponent to update
+                    
             except Exception:
                 logger.exception("Failed upserting match_stats during submit_answer")
 
@@ -306,13 +320,14 @@ class MatchService:
             except Exception:
                 logger.exception("Rollback also failed")
             raise
-        # Notify via websocket about the submission
+            
+        # Notify via websocket
         try:
             asyncio.create_task(manager.notify_answer_submitted(str(match.id), user_id, is_correct))
         except Exception:
             pass
 
-        # If match completed, notify about completion (include winner username)
+        # If match completed, notify
         if is_correct and match.status == 'completed' and match.winner_id:
             try:
                 winner = db.query(User).filter(User.id == match.winner_id).first()
@@ -327,9 +342,10 @@ class MatchService:
             "winner_id": match.winner_id,
             "time_taken_seconds": time_taken,
             "message": "Correct! You win!" if is_correct and match.winner_id == user_id else
-                      "Correct answer!" if is_correct else "Incorrect answer, try again!"
-        }
-    
+                    "Correct answer!" if is_correct else "Incorrect answer, try again!"
+    }
+
+
     @staticmethod
     def _update_player_stats(db: Session, user_id: int, solve_time: Optional[int], solved: bool):
         """Update player statistics"""
@@ -408,65 +424,46 @@ class MatchService:
     @staticmethod
     def get_leaderboard(db: Session, limit: int = 100) -> List[dict]:
         """Get leaderboard"""
-        # Prefer DB view `leaderboard` if present, fall back to building from tables
+        # Build authoritative leaderboard by computing match counts from `matches`
+        # and combining with timing/streak info from `match_stats`.
         from sqlalchemy import text
-        try:
-            query = text('SELECT * FROM leaderboard LIMIT :limit')
-            result = db.execute(query, {"limit": limit})
-            rows = []
-            for row in result:
-                # SQLAlchemy Row supports ._mapping for dict-like access
-                if hasattr(row, '_mapping'):
-                    rows.append(dict(row._mapping))
-                else:
-                    try:
-                        rows.append(dict(row))
-                    except Exception:
-                        # Fallback to manual conversion
-                        rows.append({k: v for k, v in row})
 
-            # Normalize: if a user has 0 matches, show zeros for puzzle stats
-            for r in rows:
+        q = text(
+            "WITH agg AS ("
+            "  SELECT u.id as user_id, "
+            "    COUNT(m.id) FILTER (WHERE m.status = 'completed' AND (m.player1_id = u.id OR m.player2_id = u.id)) as total_matches, "
+            "    COUNT(m.id) FILTER (WHERE m.status = 'completed' AND m.winner_id = u.id) as matches_won "
+            "  FROM users u LEFT JOIN matches m ON (m.player1_id = u.id OR m.player2_id = u.id) "
+            "  GROUP BY u.id "
+            ") "
+            "SELECT u.id, u.username, COALESCE(agg.total_matches,0) as total_matches, "
+            "COALESCE(agg.matches_won,0) as matches_won, (COALESCE(agg.total_matches,0) - COALESCE(agg.matches_won,0)) as matches_lost, "
+            "CASE WHEN COALESCE(agg.total_matches,0) > 0 THEN ROUND((COALESCE(agg.matches_won,0)::float / COALESCE(agg.total_matches,0)::float * 100)::numeric,2) ELSE 0 END as win_rate, "
+            "COALESCE(ms.total_puzzles_solved,0) as total_puzzles_solved, ms.fastest_solve_seconds, ms.average_solve_seconds, ms.current_streak, ms.best_streak "
+            "FROM users u LEFT JOIN agg ON u.id = agg.user_id LEFT JOIN match_stats ms ON u.id = ms.user_id "
+            "ORDER BY COALESCE(agg.matches_won,0) DESC, COALESCE(ms.average_solve_seconds,999999) ASC "
+            "LIMIT :limit"
+        )
+
+        result = db.execute(q, {"limit": limit})
+        rows = []
+        for row in result:
+            if hasattr(row, '_mapping'):
+                rows.append(dict(row._mapping))
+            else:
                 try:
-                    if int(r.get('total_matches') or 0) == 0:
-                        r['total_puzzles_solved'] = 0
-                        r['fastest_solve_seconds'] = 0
-                        r['average_solve_seconds'] = 0
+                    rows.append(dict(row))
                 except Exception:
-                    # If conversion fails, skip normalization for that row
-                    pass
+                    rows.append({k: v for k, v in row})
 
-            return rows
-        except Exception:
-            # Fallback: aggregate from match_stats and users
-            fallback_q = text(
-                "SELECT u.id, u.username, COALESCE(ms.total_matches,0) as total_matches, "
-                "COALESCE(ms.matches_won,0) as matches_won, COALESCE(ms.matches_lost,0) as matches_lost, "
-                "CASE WHEN COALESCE(ms.total_matches,0) > 0 THEN ROUND((COALESCE(ms.matches_won,0)::float / COALESCE(ms.total_matches,0)::float * 100)::numeric,2) ELSE 0 END as win_rate, "
-                "COALESCE(ms.total_puzzles_solved,0) as total_puzzles_solved, ms.fastest_solve_seconds, ms.average_solve_seconds, ms.current_streak, ms.best_streak "
-                "FROM users u LEFT JOIN match_stats ms ON u.id = ms.user_id "
-                "ORDER BY COALESCE(ms.matches_won,0) DESC, COALESCE(ms.average_solve_seconds,999999) ASC "
-                "LIMIT :limit"
-            )
-            result = db.execute(fallback_q, {"limit": limit})
-            rows = []
-            for row in result:
-                if hasattr(row, '_mapping'):
-                    rows.append(dict(row._mapping))
-                else:
-                    try:
-                        rows.append(dict(row))
-                    except Exception:
-                        rows.append({k: v for k, v in row})
+        # Normalize: if a user has 0 matches, show zeros for puzzle stats
+        for r in rows:
+            try:
+                if int(r.get('total_matches') or 0) == 0:
+                    r['total_puzzles_solved'] = 0
+                    r['fastest_solve_seconds'] = 0
+                    r['average_solve_seconds'] = 0
+            except Exception:
+                pass
 
-            # Normalize: if a user has 0 matches, show zeros for puzzle stats
-            for r in rows:
-                try:
-                    if int(r.get('total_matches') or 0) == 0:
-                        r['total_puzzles_solved'] = 0
-                        r['fastest_solve_seconds'] = 0
-                        r['average_solve_seconds'] = 0
-                except Exception:
-                    pass
-
-            return rows
+        return rows
