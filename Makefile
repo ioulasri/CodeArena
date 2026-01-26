@@ -47,14 +47,14 @@ restart:
 
 clean:
 	docker-compose down -v
-	rm -rf backend/venv newfront_end/node_modules
+	rm -rf backend/venv frontend/node_modules
 
 # Database Commands
 db-migrate:
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/001_initial_schema.sql
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/002_puzzle_match_schema.sql
 
-db-seed:
+db-seed: db-reset
 	# Seed sample puzzles for local testing
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/007_seed_puzzles.sql
 
@@ -68,7 +68,7 @@ db-shell:
 
 # Backend Commands
 backend-install:
-	cd backend && /usr/local/bin/python3.10 -m venv venv && \
+	cd backend && python3 -m venv venv && \
 	. venv/bin/activate && \
 	pip install --upgrade pip && \
 	pip install -r requirements.txt
@@ -84,10 +84,10 @@ backend-shell:
 
 # Frontend Commands
 frontend-install:
-	cd newfront_end && npm install
+	cd frontend && npm install
 
 frontend-run:
-	cd newfront_end && npm start
+	cd frontend && npm start
 
 frontend-build:
-	cd newfront_end && npm run build
+	cd frontend && npm run build

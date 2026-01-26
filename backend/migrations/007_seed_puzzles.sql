@@ -37,6 +37,12 @@ VALUES
  'hard',
  'tower_blocks',
  '{"height": 15, "max_value": 50}'::jsonb)
-ON CONFLICT (day) DO NOTHING;
+ON CONFLICT (day) DO UPDATE SET
+    title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    story = EXCLUDED.story,
+    difficulty = EXCLUDED.difficulty,
+    generator_type = EXCLUDED.generator_type,
+    generator_params = EXCLUDED.generator_params;
 
 COMMIT;
