@@ -13,6 +13,8 @@ class PuzzleBase(BaseModel):
     title: str
     description: str
     story: Optional[str] = None
+    sample_input: Optional[str] = None
+    sample_output: Optional[str] = None
     difficulty: str = 'medium'
     generator_type: str
     generator_params: Dict[str, Any] = {}
@@ -26,6 +28,8 @@ class PuzzleUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     story: Optional[str] = None
+    sample_input: Optional[str] = None
+    sample_output: Optional[str] = None
     difficulty: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -36,6 +40,8 @@ class PuzzleResponse(BaseModel):
     title: str
     description: str
     story: Optional[str] = None
+    sample_input: Optional[str] = None
+    sample_output: Optional[str] = None
     difficulty: str
     generator_type: str
     generator_params: Optional[Dict[str, Any]] = None
