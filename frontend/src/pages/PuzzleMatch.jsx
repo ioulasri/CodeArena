@@ -464,17 +464,63 @@ const PuzzleMatch = () => {
           <article className="day-desc input-section">
             <h3>--- Your Puzzle Input ---</h3>
             <p className="hint">
-              Copy this input to your IDE and solve the puzzle. 
-              Submit your answer below when ready!
+              Click the button below to open your puzzle input in a new tab.
             </p>
             <div className="input-data">
               <button 
-                onClick={() => copyToClipboard(inputData)}
-                className="copy-button-float"
+                onClick={() => {
+                  const newWindow = window.open('', '_blank');
+                  newWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <title>Puzzle Input - Day ${puzzle.day}</title>
+                        <style>
+                          body {
+                            background-color: #0f0f23;
+                            color: #cccccc;
+                            font-family: 'Source Code Pro', monospace;
+                            padding: 20px;
+                            margin: 0;
+                          }
+                          pre {
+                            background-color: #10101a;
+                            border: 1px solid #333340;
+                            padding: 15px;
+                            overflow: auto;
+                            white-space: pre-wrap;
+                            word-wrap: break-word;
+                          }
+                          h1 {
+                            color: #00cc00;
+                          }
+                          .copy-btn {
+                            background-color: #009900;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            cursor: pointer;
+                            font-family: 'Source Code Pro', monospace;
+                            margin-bottom: 20px;
+                          }
+                          .copy-btn:hover {
+                            background-color: #00cc00;
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <h1>Day ${puzzle.day}: ${puzzle.title}</h1>
+                        <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('input').textContent); this.textContent='Copied!';">📋 Copy to Clipboard</button>
+                        <pre id="input">${inputData}</pre>
+                      </body>
+                    </html>
+                  `);
+                  newWindow.document.close();
+                }}
+                className="get-input-button"
               >
-                📋 Copy
+                📄 Get Puzzle Input
               </button>
-              <pre>{inputData}</pre>
             </div>
           </article>
 
