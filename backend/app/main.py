@@ -16,10 +16,15 @@ elif cors_origins_env:
     # comma-separated origins
     allowed_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip()]
 else:
+    # Allow common development origins
+    # This allows localhost/127.0.0.1 frontends to access the backend on any local IP
     allowed_origins = [
         "http://localhost:3000",
-        "http://192.168.100.2:3000",
+        "http://localhost:8000",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+        "http://192.168.100.2:3000",
+        "http://192.168.100.2:8000",
     ]
 
 app = FastAPI(
@@ -30,13 +35,15 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware
+# CORS middleware - must be added before routes
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Include API router
