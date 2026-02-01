@@ -53,6 +53,7 @@ clean:
 db-migrate:
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/001_initial_schema.sql
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/002_puzzle_match_schema.sql
+	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/008_add_performance_indexes.sql
 
 db-seed: db-reset
 	# Seed sample puzzles for local testing
