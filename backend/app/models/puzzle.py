@@ -17,6 +17,8 @@ class Puzzle(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
     story = Column(Text)
+    sample_input = Column(Text)
+    sample_output = Column(Text)
     difficulty = Column(String(20), default='medium')
     generator_type = Column(String(50), nullable=False)
     generator_params = Column(JSONB, default={})
