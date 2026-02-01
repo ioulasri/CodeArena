@@ -44,7 +44,7 @@ def decode_token(token: str) -> Optional[dict]:
         return None
 
 
-async def get_current_user_ws(token: str, db) -> Optional[object]:
+async def get_current_user_from_token(token: str, db) -> Optional[object]:
     """Get current user from WebSocket token"""
     from app.models.user import User
     
@@ -56,9 +56,3 @@ async def get_current_user_ws(token: str, db) -> Optional[object]:
     user = db.query(User).filter(User.username == username).first()
     
     return user
-
-
-def get_current_user(authorization: str, db) -> object:
-    """Get current user from HTTP header - import from auth endpoint"""
-    from app.api.v1.endpoints.auth import get_current_user_dependency
-    return get_current_user_dependency
