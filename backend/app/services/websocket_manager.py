@@ -7,9 +7,21 @@ from typing import Dict, Set
 from fastapi import WebSocket
 import json
 import asyncio
+import logging
+
+from app.core.enums import WebSocketMessageType
+
+logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
+    """
+    Manages WebSocket connections for real-time match communication.
+    
+    Maintains active connections per match and handles message broadcasting,
+    connection lifecycle, and notifications.
+    """
+    
     def __init__(self):
         # Map of match_id -> set of websocket connections
         self.active_connections: Dict[str, Set[WebSocket]] = {}
@@ -28,7 +40,7 @@ class ConnectionManager:
         
         # Notify others in the match
         await self.broadcast_to_match(match_id, {
-            "type": "player_connected",
+            "type": WebSocketMessageType.PLAYER_CONNECTED,
             "user_id": user_id,
             "timestamp": asyncio.get_event_loop().time()
         }, exclude=websocket)
@@ -50,7 +62,7 @@ class ConnectionManager:
             # Notify others
             asyncio.create_task(
                 self.broadcast_to_match(match_id, {
-                    "type": "player_disconnected",
+                    "type": WebSocketMessageType.PLAYER_DISCONNECTED,
                     "user_id": user_id
                 })
             )
@@ -60,7 +72,7 @@ class ConnectionManager:
         try:
             await websocket.send_text(json.dumps(message))
         except Exception as e:
-            print(f"Error sending message: {e}")
+            logger.warning(f"Error sending WebSocket message: {e}")
             self.disconnect(websocket)
     
     async def broadcast_to_match(self, match_id: str, message: dict, exclude: WebSocket = None):
@@ -76,7 +88,7 @@ class ConnectionManager:
             try:
                 await connection.send_text(json.dumps(message))
             except Exception as e:
-                print(f"Error broadcasting: {e}")
+                logger.warning(f"Error broadcasting WebSocket message: {e}")
                 disconnected.append(connection)
         
         # Clean up disconnected clients
@@ -86,7 +98,7 @@ class ConnectionManager:
     async def notify_match_start(self, match_id: str, match_data: dict):
         """Notify all players that the match has started"""
         await self.broadcast_to_match(match_id, {
-            "type": "match_started",
+            "type": WebSocketMessageType.MATCH_STARTED,
             "match_id": match_id,
             "started_at": match_data.get("started_at"),
             "puzzle": match_data.get("puzzle")
@@ -95,7 +107,7 @@ class ConnectionManager:
     async def notify_answer_submitted(self, match_id: str, user_id: int, is_correct: bool):
         """Notify when a player submits an answer"""
         await self.broadcast_to_match(match_id, {
-            "type": "answer_submitted",
+            "type": WebSocketMessageType.ANSWER_SUBMITTED,
             "user_id": user_id,
             "is_correct": is_correct
         })
@@ -103,7 +115,7 @@ class ConnectionManager:
     async def notify_match_completed(self, match_id: str, winner_id: int, winner_username: str):
         """Notify when a match is completed"""
         await self.broadcast_to_match(match_id, {
-            "type": "match_completed",
+            "type": WebSocketMessageType.MATCH_COMPLETED,
             "match_id": match_id,
             "winner_id": winner_id,
             "winner_username": winner_username
