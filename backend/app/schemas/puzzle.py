@@ -133,8 +133,8 @@ class LeaderboardEntry(BaseModel):
     total_puzzles_solved: int
     fastest_solve_seconds: Optional[int] = None
     average_solve_seconds: Optional[float] = None
-    current_streak: int
-    best_streak: int
+    current_streak: Optional[int] = 0
+    best_streak: Optional[int] = 0
 
 
 # Match History Schema
