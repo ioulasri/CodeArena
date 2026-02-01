@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from datetime import timedelta
 from typing import Optional
 from app.core.database import get_db
 from app.core.security import hash_password, verify_password, create_access_token, decode_token
+from app.core.validators import validate_username, validate_email, validate_password
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
 
 router = APIRouter()
 
 # Dependency for getting current user
-async def get_current_user_dependency(
+async def get_current_user(
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db)
 ) -> User:
@@ -44,9 +44,14 @@ async def get_current_user_dependency(
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
+    # Validate inputs
+    username = validate_username(user_data.username)
+    email = validate_email(user_data.email)
+    password = validate_password(user_data.password)
+    
     # Check if user already exists
     existing_user = db.query(User).filter(
-        (User.username == user_data.username) | (User.email == user_data.email)
+        (User.username == username) | (User.email == email)
     ).first()
     
     if existing_user:
@@ -57,9 +62,9 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     
     # Create new user
     db_user = User(
-        username=user_data.username,
-        email=user_data.email,
-        password_hash=hash_password(user_data.password)
+        username=username,
+        email=email,
+        password_hash=hash_password(password)
     )
     db.add(db_user)
     db.commit()
@@ -88,6 +93,6 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     }
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(current_user: User = Depends(get_current_user_dependency)):
+async def me(current_user: User = Depends(get_current_user)):
     """Get current authenticated user"""
     return current_user
