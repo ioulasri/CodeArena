@@ -1,6 +1,23 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+// Determine API URL:
+// 1) Respect `REACT_APP_API_URL` when provided (CI / Docker builds)
+// 2) When running in a browser on a different device (phone/laptop on LAN),
+//    derive the API host from the page hostname and assume backend on port 8000
+// 3) Fallback to localhost for non-browser contexts
+let API_URL = process.env.REACT_APP_API_URL;
+if (!API_URL) {
+  if (typeof window !== 'undefined') {
+    const proto = window.location.protocol === 'https:' ? 'https' : 'http';
+    const host = window.location.hostname;
+    // If page is served from same host as backend, use same origin + /api/v1
+    // Otherwise assume backend listens on port 8000 on the page host.
+    const inferredPort = window.location.port ? window.location.port : '8000';
+    API_URL = `${proto}://${host}:${inferredPort}/api/v1`;
+  } else {
+    API_URL = 'http://localhost:8000/api/v1';
+  }
+}
 
 // Create axios instance with default config
 const api = axios.create({

@@ -2,9 +2,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import api_router
 from app.core.database import engine, Base
+import os
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
+
+# Configure CORS from environment for easier local testing on different devices
+cors_allow_all = os.getenv('CORS_ALLOW_ALL', 'false').lower() in ('1', 'true', 'yes')
+cors_origins_env = os.getenv('CORS_ALLOW_ORIGINS')
+if cors_allow_all:
+    allowed_origins = ["*"]
+elif cors_origins_env:
+    # comma-separated origins
+    allowed_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip()]
+else:
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://192.168.100.2:3000",
+        "http://127.0.0.1:3000",
+    ]
 
 app = FastAPI(
     title="CodeArena API",
@@ -17,11 +33,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://192.168.100.2:3000",
-        "http://127.0.0.1:3000"
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
