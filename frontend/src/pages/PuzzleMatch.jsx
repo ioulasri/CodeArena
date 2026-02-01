@@ -108,7 +108,7 @@ const PuzzleMatch = () => {
       const ws = createWebSocketConnection(matchId, token);
       
       ws.onopen = () => {
-        console.log('WebSocket connected');
+        // WebSocket connected
       };
       
       ws.onmessage = (event) => {
@@ -146,7 +146,7 @@ const PuzzleMatch = () => {
       };
       
       ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        // WebSocket disconnected
       };
       
       wsRef.current = ws;
@@ -181,7 +181,6 @@ const PuzzleMatch = () => {
       const pid = resolvedPuzzleId;
       const response = await matchesAPI.create(pid, code);
       const createdMatch = response.data;
-      console.log('Created match:', createdMatch);
       setMatch(createdMatch);
       setMatchId(createdMatch.id);
       connectWebSocket(createdMatch.id);
@@ -229,7 +228,6 @@ const PuzzleMatch = () => {
     const interval = setInterval(async () => {
       try {
         const response = await matchesAPI.getDetails(matchId);
-        console.log('Poll match details:', response.data);
         const matchData = response.data;
         
         if (matchData.status === 'ready') {
@@ -249,7 +247,6 @@ const PuzzleMatch = () => {
   const handleStartMatch = async (matchId) => {
     try {
       const response = await matchesAPI.start(matchId);
-      console.log('Start match response:', response.data);
       // Update match state from response
       const res = response.data || {};
       const updatedMatch = {
