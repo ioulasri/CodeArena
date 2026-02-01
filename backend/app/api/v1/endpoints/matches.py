@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.core.database import get_db
-from app.api.v1.endpoints.auth import get_current_user_dependency as get_current_user
+from app.core.validators import validate_room_code, validate_answer
+from app.api.v1.endpoints.auth import get_current_user
 from app.models.user import User
 from app.models.puzzle import Puzzle, Match
 from app.schemas.puzzle import (
@@ -53,11 +54,14 @@ async def create_match(
 ):
     """Create a new match"""
     try:
+        # Validate room code if provided
+        validated_room_code = validate_room_code(match_data.room_code)
+        
         match = MatchService.create_match(
             db, 
             current_user.id, 
             match_data.puzzle_id, 
-            match_data.room_code
+            validated_room_code
         )
         return match
     except ValueError as e:
@@ -72,10 +76,18 @@ async def join_match(
 ):
     """Join an existing match"""
     try:
+        # Validate room code
+        validated_room_code = validate_room_code(join_data.room_code)
+        if not validated_room_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Room code is required to join a match"
+            )
+        
         match = MatchService.join_match(
             db,
             current_user.id,
-            room_code=join_data.room_code
+            room_code=validated_room_code
         )
         return match
     except ValueError as e:
@@ -120,11 +132,14 @@ async def submit_answer(
 ):
     """Submit an answer for a match"""
     try:
+        # Validate answer
+        validated_answer = validate_answer(answer_data.answer)
+        
         result = MatchService.submit_answer(
             db,
             match_id,
             current_user.id,
-            answer_data.answer
+            validated_answer
         )
         return result
     except ValueError as e:
@@ -173,38 +188,64 @@ async def get_user_match_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user's match history"""
-    matches = MatchService.get_user_matches(db, current_user.id, limit)
+    """Get user's match history with optimized queries"""
+    from app.models.puzzle import PlayerAnswer
     
+    # Get matches with relationships loaded in one query
+    matches = db.query(Match).filter(
+        or_(Match.player1_id == current_user.id, Match.player2_id == current_user.id)
+    ).order_by(Match.created_at.desc()).limit(limit).all()
+    
+    # Collect all IDs to fetch in bulk
+    puzzle_ids = {match.puzzle_id for match in matches}
+    user_ids = set()
+    match_ids = []
+    
+    for match in matches:
+        match_ids.append(match.id)
+        if match.player1_id:
+            user_ids.add(match.player1_id)
+        if match.player2_id:
+            user_ids.add(match.player2_id)
+        if match.winner_id:
+            user_ids.add(match.winner_id)
+    
+    # Bulk fetch all related data
+    puzzles = {p.id: p for p in db.query(Puzzle).filter(Puzzle.id.in_(puzzle_ids)).all()} if puzzle_ids else {}
+    users = {u.id: u for u in db.query(User).filter(User.id.in_(user_ids)).all()} if user_ids else {}
+    answers = {
+        a.match_id: a for a in db.query(PlayerAnswer).filter(
+            PlayerAnswer.match_id.in_(match_ids),
+            PlayerAnswer.player_id == current_user.id,
+            PlayerAnswer.is_correct == True
+        ).all()
+    } if match_ids else {}
+    
+    # Build history response
     history = []
     for match in matches:
-        puzzle = db.query(Puzzle).filter(Puzzle.id == match.puzzle_id).first()
+        puzzle = puzzles.get(match.puzzle_id)
         
         # Determine opponent
         opponent_id = match.player2_id if match.player1_id == current_user.id else match.player1_id
-        opponent = db.query(User).filter(User.id == opponent_id).first() if opponent_id else None
+        opponent = users.get(opponent_id) if opponent_id else None
         
         # Check if user won
         won = match.winner_id == current_user.id
         
-        # Get time taken
-        from app.models.puzzle import PlayerAnswer
-        answer = db.query(PlayerAnswer).filter(
-            PlayerAnswer.match_id == match.id,
-            PlayerAnswer.player_id == current_user.id,
-            PlayerAnswer.is_correct == True
-        ).first()
+        # Get answer
+        answer = answers.get(match.id)
         
-        # Return fields the frontend expects
+        # Build response
         history.append({
             "id": str(match.id),
             "created_at": match.created_at,
             "puzzle_id": puzzle.id if puzzle else None,
             "puzzle_day": puzzle.day if puzzle else 0,
             "puzzle_title": puzzle.title if puzzle else "Unknown",
-            "player1_username": db.query(User).filter(User.id == match.player1_id).first().username if match.player1_id else None,
-            "player2_username": db.query(User).filter(User.id == match.player2_id).first().username if match.player2_id else None,
-            "winner_username": db.query(User).filter(User.id == match.winner_id).first().username if match.winner_id else None,
+            "player1_username": users[match.player1_id].username if match.player1_id and match.player1_id in users else None,
+            "player2_username": users[match.player2_id].username if match.player2_id and match.player2_id in users else None,
+            "winner_username": users[match.winner_id].username if match.winner_id and match.winner_id in users else None,
             "opponent_username": (
                 "Solo" if opponent is None and (match.player1_id == current_user.id or match.player2_id == current_user.id) and (match.player1_id is None or match.player2_id is None)
                 else (opponent.username if opponent else "Waiting...")
