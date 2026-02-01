@@ -3,20 +3,21 @@ Match Service - Handles match creation, joining, and management
 """
 
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, text
 from typing import Optional, List, Tuple
 from datetime import datetime
 import random
 import string
+import asyncio
+import logging
 
 from app.models.puzzle import Match, Puzzle, PlayerPuzzleInput, PlayerAnswer, MatchStats
 from app.models.user import User
 from app.services.puzzle_generators import PuzzleGeneratorFactory
 from app.schemas.puzzle import MatchResponse, MatchDetailResponse
 from app.services.websocket_manager import manager
-import asyncio
-import logging
-from sqlalchemy import text
+from app.core.validators import normalize_answer
+from app.core.enums import MatchStatus
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class MatchService:
             # Public match - try to find waiting match first
             waiting_match = db.query(Match).filter(
                 Match.puzzle_id == puzzle_id,
-                Match.status == 'waiting',
+                Match.status == MatchStatus.WAITING,
                 Match.player2_id == None,
                 Match.room_code == None,
                 Match.player1_id != user_id
@@ -65,7 +66,7 @@ class MatchService:
         match = Match(
             puzzle_id=puzzle_id,
             player1_id=user_id,
-            status='waiting',
+            status=MatchStatus.WAITING,
             room_code=room_code
         )
         
@@ -85,7 +86,7 @@ class MatchService:
         else:
             # Auto-match: find any waiting public match
             match = db.query(Match).filter(
-                Match.status == 'waiting',
+                Match.status == MatchStatus.WAITING,
                 Match.player2_id == None,
                 Match.room_code == None,
                 Match.player1_id != user_id
@@ -94,7 +95,7 @@ class MatchService:
         if not match:
             raise ValueError("No match found")
         
-        if match.status != 'waiting':
+        if match.status != MatchStatus.WAITING:
             raise ValueError("Match is not accepting players")
         
         if match.player1_id == user_id:
@@ -105,7 +106,7 @@ class MatchService:
         
         # Add second player
         match.player2_id = user_id
-        match.status = 'ready'
+        match.status = MatchStatus.READY
         
         db.commit()
         db.refresh(match)
@@ -126,8 +127,8 @@ class MatchService:
         # or allow solo start when match is 'waiting' and no second player exists
         # and the requesting user is the match creator.
         if not (
-            match.status == 'ready' or
-            (match.status == 'waiting' and match.player2_id is None and user_id == match.player1_id)
+            match.status == MatchStatus.READY or
+            (match.status == MatchStatus.WAITING and match.player2_id is None and user_id == match.player1_id)
         ):
             raise ValueError("Match is not ready to start")
         
@@ -135,7 +136,7 @@ class MatchService:
             raise ValueError("You are not a player in this match")
         
         # Start the match
-        match.status = 'active'
+        match.status = MatchStatus.ACTIVE
         match.started_at = datetime.utcnow()
         
         # Get puzzle
@@ -185,8 +186,8 @@ class MatchService:
                 }
             }
             asyncio.create_task(manager.notify_match_start(str(match.id), match_data))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to send WebSocket match start notification: {e}")
 
         # Return match and player's input details (including expected answer)
         return match, {
@@ -201,7 +202,7 @@ class MatchService:
         if not match:
             raise ValueError("Match not found")
         
-        if match.status != 'active':
+        if match.status != MatchStatus.ACTIVE:
             raise ValueError("Match is not active")
         
         if user_id not in [match.player1_id, match.player2_id]:
@@ -231,11 +232,11 @@ class MatchService:
                 "message": "You already submitted the correct answer"
             }
         
-        # Normalize answers
-        submitted = str(answer).strip().lower() if answer is not None else ""
-        expected_raw = getattr(player_input, 'expected_answer', None)
-        expected = str(expected_raw).strip().lower() if expected_raw is not None else ""
-        is_correct = (submitted == expected) and expected != ""
+        # Check answer using validator's normalize function
+        if not player_input.expected_answer:
+            is_correct = False
+        else:
+            is_correct = normalize_answer(answer) == normalize_answer(player_input.expected_answer)
         
         # Calculate time taken
         time_taken = int((datetime.utcnow() - match.started_at).total_seconds()) if match.started_at else None
@@ -254,7 +255,7 @@ class MatchService:
         # If correct, check if first to solve
         if is_correct and not match.winner_id:
             match.winner_id = user_id
-            match.status = 'completed'
+            match.status = MatchStatus.COMPLETED
             match.completed_at = datetime.utcnow()
 
             try:
@@ -324,17 +325,17 @@ class MatchService:
         # Notify via websocket
         try:
             asyncio.create_task(manager.notify_answer_submitted(str(match.id), user_id, is_correct))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to send WebSocket answer notification: {e}")
 
         # If match completed, notify
-        if is_correct and match.status == 'completed' and match.winner_id:
+        if is_correct and match.status == MatchStatus.COMPLETED and match.winner_id:
             try:
                 winner = db.query(User).filter(User.id == match.winner_id).first()
                 winner_username = winner.username if winner else None
                 asyncio.create_task(manager.notify_match_completed(str(match.id), match.winner_id, winner_username))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to send WebSocket match completion notification: {e}")
 
         return {
             "is_correct": is_correct,
