@@ -54,12 +54,15 @@ db-migrate:
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/001_initial_schema.sql
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/002_puzzle_match_schema.sql
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/008_add_performance_indexes.sql
+	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/009_add_sample_fields_and_new_puzzles.sql
+	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/010_add_21_amazing_puzzles.sql
 
 db-seed:
-	# Seed sample puzzles for local testing
+	# Seed sample puzzles for local testing (legacy - now included in migration 009)
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/007_seed_puzzles.sql
 
 db-reset:
+	docker exec -i codearena-db psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'codearena' AND pid <> pg_backend_pid();"
 	docker exec -i codearena-db psql -U postgres -c "DROP DATABASE IF EXISTS codearena;"
 	docker exec -i codearena-db psql -U postgres -c "CREATE DATABASE codearena;"
 	$(MAKE) db-migrate
