@@ -47,19 +47,22 @@ restart:
 
 clean:
 	docker-compose down -v
-	rm -rf backend/venv frontend/node_modules
+	rm -rf backend/venv newfront_end/node_modules
 
 # Database Commands
 db-migrate:
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/001_initial_schema.sql
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/002_puzzle_match_schema.sql
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/008_add_performance_indexes.sql
+	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/009_add_sample_fields_and_new_puzzles.sql
+	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/010_add_21_amazing_puzzles.sql
 
-db-seed: db-reset
-	# Seed sample puzzles for local testing
+db-seed:
+	# Seed sample puzzles for local testing (legacy - now included in migration 009)
 	docker exec -i codearena-db psql -U postgres -d codearena < backend/migrations/007_seed_puzzles.sql
 
 db-reset:
+	docker exec -i codearena-db psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'codearena' AND pid <> pg_backend_pid();"
 	docker exec -i codearena-db psql -U postgres -c "DROP DATABASE IF EXISTS codearena;"
 	docker exec -i codearena-db psql -U postgres -c "CREATE DATABASE codearena;"
 	$(MAKE) db-migrate
@@ -69,7 +72,7 @@ db-shell:
 
 # Backend Commands
 backend-install:
-	cd backend && python3 -m venv venv && \
+	cd backend && /usr/local/bin/python3.10 -m venv venv && \
 	. venv/bin/activate && \
 	pip install --upgrade pip && \
 	pip install -r requirements.txt
@@ -85,10 +88,10 @@ backend-shell:
 
 # Frontend Commands
 frontend-install:
-	cd frontend && npm install
+	cd newfront_end && npm install
 
 frontend-run:
-	cd frontend && npm start
+	cd newfront_end && npm start
 
 frontend-build:
-	cd frontend && npm run build
+	cd newfront_end && npm run build
